@@ -1,0 +1,29 @@
+# Production Dockerfile (本番環境用)
+FROM node:18-alpine AS builder
+
+WORKDIR /app
+
+# Install dependencies
+COPY package*.json ./
+RUN npm ci
+
+# Build the application
+COPY . .
+RUN npm run build
+
+# Production stage
+FROM node:18-alpine AS runner
+
+WORKDIR /app
+
+# Copy built application
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/package*.json ./
+
+# Install only production dependencies
+RUN npm ci --only=production && npm cache clean --force
+
+EXPOSE 3000
+
+CMD ["npm", "start"]

@@ -1,0 +1,43 @@
+# Environment variables
+.env
+.env.local
+
+# Logs
+*.log
+logs/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
+
+# Backup files
+*.bak
+*.backup
+
+# Docker volumes
+docker-data/
+
+# Local development files
+local_settings.py
+local_config.json
+
+# Test files
+test_results/
+coverage_reports/
