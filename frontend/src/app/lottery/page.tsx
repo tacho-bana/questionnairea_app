@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import ProtectedRoute from '@/components/ProtectedRoute'
-import Navbar from '@/components/Navbar'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase-client'
 import { Database } from '@/types/database'
@@ -175,11 +174,7 @@ export default function LotteryPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50">
-        <Navbar />
-        
-        <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-          <div className="px-4 py-6 sm:px-0">
+      <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center mb-8">
               <h1 className="text-3xl font-bold text-gray-900">抽選イベント</h1>
               <div className="text-right">
@@ -342,8 +337,6 @@ export default function LotteryPage() {
               </ul>
             </div>
           </div>
-        </main>
-      </div>
     </ProtectedRoute>
   )
 }

@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import ProtectedRoute from '@/components/ProtectedRoute'
-import Navbar from '@/components/Navbar'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase-client'
 import { Database } from '@/types/database'
@@ -20,6 +19,7 @@ export default function SurveysPage() {
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState(true)
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'points_high' | 'points_low' | 'deadline_soon' | 'deadline_later'>('newest')
 
   useEffect(() => {
     fetchCategories()
@@ -29,7 +29,7 @@ export default function SurveysPage() {
     if (user) {
       fetchSurveys()
     }
-  }, [user, selectedCategory, searchTerm])
+  }, [user, selectedCategory, searchTerm, sortBy])
 
   const fetchCategories = async () => {
     try {
@@ -56,7 +56,6 @@ export default function SurveysPage() {
           categories (*)
         `)
         .eq('status', 'active')
-        .order('created_at', { ascending: false })
 
       // 自分が作成したアンケートは除外
       if (user) {
@@ -69,6 +68,30 @@ export default function SurveysPage() {
 
       if (searchTerm) {
         query = query.ilike('title', `%${searchTerm}%`)
+      }
+
+      // ソート条件を適用
+      switch (sortBy) {
+        case 'newest':
+          query = query.order('created_at', { ascending: false })
+          break
+        case 'oldest':
+          query = query.order('created_at', { ascending: true })
+          break
+        case 'points_high':
+          query = query.order('reward_points', { ascending: false })
+          break
+        case 'points_low':
+          query = query.order('reward_points', { ascending: true })
+          break
+        case 'deadline_soon':
+          query = query.order('deadline', { ascending: true })
+          break
+        case 'deadline_later':
+          query = query.order('deadline', { ascending: false })
+          break
+        default:
+          query = query.order('created_at', { ascending: false })
       }
 
       const { data, error } = await query
@@ -85,11 +108,7 @@ export default function SurveysPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50">
-        <Navbar />
-        
-        <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-          <div className="px-4 py-6 sm:px-0">
+      <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
             {/* Header */}
             <div className="mb-8">
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
@@ -102,7 +121,7 @@ export default function SurveysPage() {
 
             {/* Search & Filter */}
             <div className="mb-8 bg-white shadow-lg rounded-2xl p-6 border border-gray-100">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                   <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-2">
                     検索
@@ -142,22 +161,83 @@ export default function SurveysPage() {
                     ))}
                   </select>
                 </div>
+
+                <div>
+                  <label htmlFor="sort" className="block text-sm font-medium text-gray-700 mb-2">
+                    並び替え
+                  </label>
+                  <select
+                    id="sort"
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="newest">新着順</option>
+                    <option value="oldest">古い順</option>
+                    <option value="points_high">報酬ポイント（高い順）</option>
+                    <option value="points_low">報酬ポイント（低い順）</option>
+                    <option value="deadline_soon">締切が近い順</option>
+                    <option value="deadline_later">締切が遠い順</option>
+                  </select>
+                </div>
               </div>
 
               {/* Results count */}
               <div className="mt-4 pt-4 border-t border-gray-200">
                 <div className="flex items-center justify-between text-sm text-gray-600">
-                  <span>{surveys.length}件のアンケートが見つかりました</span>
-                  {selectedCategory && (
+                  <div className="flex items-center space-x-4">
+                    <span>{surveys.length}件のアンケートが見つかりました</span>
+                    <span className="text-gray-400">•</span>
+                    <span className="text-blue-600 font-medium">
+                      {sortBy === 'newest' && '新着順'}
+                      {sortBy === 'oldest' && '古い順'}
+                      {sortBy === 'points_high' && 'ポイント高い順'}
+                      {sortBy === 'points_low' && 'ポイント低い順'}
+                      {sortBy === 'deadline_soon' && '締切近い順'}
+                      {sortBy === 'deadline_later' && '締切遠い順'}
+                    </span>
+                  </div>
+                  {(selectedCategory || searchTerm) && (
                     <button
-                      onClick={() => setSelectedCategory(null)}
-                      className="text-blue-600 hover:text-blue-500 font-medium"
+                      onClick={() => {
+                        setSelectedCategory(null)
+                        setSearchTerm('')
+                      }}
+                      className="text-blue-600 hover:text-blue-500 font-medium flex items-center space-x-1"
                     >
-                      フィルターを解除
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                      <span>フィルターを解除</span>
                     </button>
                   )}
                 </div>
               </div>
+            </div>
+
+            {/* Quick Sort Buttons */}
+            <div className="mb-6 flex flex-wrap gap-2">
+              <span className="text-sm font-medium text-gray-700 flex items-center mr-2">クイック並び替え:</span>
+              {[
+                { key: 'newest', label: '新着順', icon: '🆕' },
+                { key: 'points_high', label: '高ポイント', icon: '💰' },
+                { key: 'deadline_soon', label: '締切迫る', icon: '⏰' }
+              ].map((item) => (
+                <button
+                  key={item.key}
+                  onClick={() => setSortBy(item.key as typeof sortBy)}
+                  className={`
+                    inline-flex items-center space-x-1 px-3 py-1.5 rounded-full text-sm font-medium transition-colors duration-200
+                    ${sortBy === item.key 
+                      ? 'bg-blue-100 text-blue-700 ring-2 ring-blue-500 ring-opacity-20' 
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }
+                  `}
+                >
+                  <span>{item.icon}</span>
+                  <span>{item.label}</span>
+                </button>
+              ))}
             </div>
 
             {loading ? (
@@ -268,8 +348,6 @@ export default function SurveysPage() {
               </div>
             )}
           </div>
-        </main>
-      </div>
     </ProtectedRoute>
   )
 }

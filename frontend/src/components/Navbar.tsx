@@ -67,8 +67,9 @@ export default function Navbar() {
     <nav className="bg-white border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
-          {/* Logo & Brand */}
-          <div className="flex items-center">
+          {/* Left side: Logo, Navigation, Points, and User (Desktop) */}
+          <div className="flex items-center space-x-8">
+            {/* Logo & Brand */}
             <Link href="/dashboard" className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-blue-600 rounded-md flex items-center justify-center">
                 <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -79,34 +80,32 @@ export default function Navbar() {
                 SurveyHub
               </span>
             </Link>
-          </div>
 
-          {/* Desktop Navigation */}
-          {user && (
-            <div className="hidden lg:flex items-center space-x-8">
-              {navItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`
-                    px-3 py-2 text-sm font-medium transition-colors duration-200
-                    ${pathname === item.href 
-                      ? 'text-blue-600 border-b-2 border-blue-600' 
-                      : 'text-gray-600 hover:text-gray-900'
-                    }
-                  `}
-                >
-                  {item.name}
-                </Link>
-              ))}
-            </div>
-          )}
+            {/* Desktop Navigation */}
+            {user && (
+              <div className="hidden lg:flex items-center space-x-6">
+                {navItems.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`
+                      px-3 py-2 text-sm font-medium transition-colors duration-200
+                      ${pathname === item.href 
+                        ? 'text-blue-600 border-b-2 border-blue-600' 
+                        : 'text-gray-600 hover:text-gray-900'
+                      }
+                    `}
+                  >
+                    {item.name}
+                  </Link>
+                ))}
+              </div>
+            )}
 
-          {/* User Info & Mobile Menu */}
-          <div className="flex items-center space-x-4">
-            {user ? (
-              <>
-                {/* Points Display - Always visible */}
+            {/* Desktop: Points and User Menu */}
+            {user && (
+              <div className="hidden lg:flex items-center space-x-4">
+                {/* Points Display */}
                 <div className="flex items-center bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg px-3 py-1.5 shadow-sm">
                   <svg className="w-4 h-4 text-white mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
@@ -116,8 +115,8 @@ export default function Navbar() {
                   </span>
                 </div>
 
-                {/* User Menu Desktop */}
-                <div className="hidden md:block relative" ref={userMenuRef}>
+                {/* User Menu */}
+                <div className="relative" ref={userMenuRef}>
                   <button
                     onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                     className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200"
@@ -154,6 +153,23 @@ export default function Navbar() {
                       </button>
                     </div>
                   )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Right side: Mobile Menu and Points (Mobile only) */}
+          <div className="flex items-center space-x-4">
+            {user ? (
+              <>
+                {/* Points Display - Mobile only */}
+                <div className="lg:hidden flex items-center bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg px-3 py-1.5 shadow-sm">
+                  <svg className="w-4 h-4 text-white mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                  </svg>
+                  <span className="text-white text-sm font-semibold">
+                    {userProfile?.points?.toLocaleString() || 0}
+                  </span>
                 </div>
 
                 {/* Mobile Menu Button */}

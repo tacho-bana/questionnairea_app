@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import ProtectedRoute from '@/components/ProtectedRoute'
-import Navbar from '@/components/Navbar'
 import SurveyBuilderSimple, { Question } from '@/components/SurveyBuilderSimple'
 import SurveyPreview from '@/components/SurveyPreview'
 import { useAuth } from '@/hooks/useAuth'
@@ -17,6 +16,7 @@ export default function CreateSurveyPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [categories, setCategories] = useState<Category[]>([])
+  const [userProfile, setUserProfile] = useState<any>(null)
   
   const [formData, setFormData] = useState({
     title: '',
@@ -41,10 +41,16 @@ export default function CreateSurveyPage() {
 
   // 報酬ポイントを自動計算
   const rewardPerResponse = Math.floor(formData.total_budget / formData.max_responses) || 0
+  
+  // ポイント不足チェック
+  const isInsufficientPoints = userProfile && userProfile.points < formData.total_budget
 
   useEffect(() => {
     fetchCategories()
-  }, [])
+    if (user) {
+      fetchUserProfile()
+    }
+  }, [user])
 
   const fetchCategories = async () => {
     try {
@@ -61,12 +67,34 @@ export default function CreateSurveyPage() {
     }
   }
 
+  const fetchUserProfile = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', user?.id)
+        .single()
+      
+      if (data) {
+        setUserProfile(data)
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error)
+    }
+  }
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
 
     try {
+      // ポイント残高チェック
+      if (!userProfile || userProfile.points < formData.total_budget) {
+        alert(`ポイントが足りません。必要: ${formData.total_budget.toLocaleString()}pt / 保有: ${(userProfile?.points || 0).toLocaleString()}pt`)
+        return
+      }
+
       // バリデーション
       if (formData.total_budget < 1000 || formData.total_budget % 100 !== 0) {
         alert('消費ポイント数は1000ポイント以上で100ポイント単位で設定してください')
@@ -167,10 +195,7 @@ export default function CreateSurveyPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50">
-        <Navbar />
-        
-        <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
               アンケート作成
@@ -415,14 +440,26 @@ export default function CreateSurveyPage() {
                         <div className="text-xs text-gray-600">1人あたり報酬</div>
                       </div>
                     </div>
-                    <div className="bg-blue-100 rounded-lg p-3">
-                      <p className="text-sm text-blue-800 flex items-center">
-                        <svg className="w-4 h-4 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        締切までに目標人数が集まらない場合、余ったポイントは返金されます
-                      </p>
-                    </div>
+                    {/* Point balance check */}
+                    {isInsufficientPoints ? (
+                      <div className="bg-red-100 rounded-lg p-3 mb-3">
+                        <p className="text-sm text-red-800 flex items-center">
+                          <svg className="w-4 h-4 text-red-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                          </svg>
+                          ⚠️ ポイントが不足しています。必要: {formData.total_budget.toLocaleString()}pt / 保有: {(userProfile?.points || 0).toLocaleString()}pt
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="bg-blue-100 rounded-lg p-3">
+                        <p className="text-sm text-blue-800 flex items-center">
+                          <svg className="w-4 h-4 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          締切までに目標人数が集まらない場合、余ったポイントは返金されます
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -444,16 +481,19 @@ export default function CreateSurveyPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={loading}
-                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md disabled:opacity-50 transition-colors duration-200"
+                  disabled={loading || isInsufficientPoints}
+                  className={`px-6 py-2 text-white rounded-md transition-colors duration-200 ${
+                    loading || isInsufficientPoints
+                      ? 'bg-gray-400 cursor-not-allowed opacity-50' 
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  }`}
                 >
-                  {loading ? '作成中...' : 'アンケートを作成'}
+                  {loading ? '作成中...' : isInsufficientPoints ? 'ポイント不足' : 'アンケートを作成'}
                 </button>
               </div>
             </form>
             </div>
           )}
-        </main>
       </div>
     </ProtectedRoute>
   )

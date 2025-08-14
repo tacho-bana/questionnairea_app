@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import ProtectedRoute from '@/components/ProtectedRoute'
-import Navbar from '@/components/Navbar'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase-client'
 import { Database } from '@/types/database'
@@ -375,13 +374,10 @@ export default function SurveyDetailPage() {
   if (loading) {
     return (
       <ProtectedRoute>
-        <div className="min-h-screen bg-gray-50">
-          <Navbar />
-          <main className="max-w-4xl mx-auto py-6 px-4">
-            <div className="flex justify-center items-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            </div>
-          </main>
+        <div className="max-w-4xl mx-auto py-6 px-4">
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
         </div>
       </ProtectedRoute>
     )
@@ -390,9 +386,7 @@ export default function SurveyDetailPage() {
   if (!survey) {
     return (
       <ProtectedRoute>
-        <div className="min-h-screen bg-gray-50">
-          <Navbar />
-          <main className="max-w-4xl mx-auto py-6 px-4">
+        <div className="max-w-4xl mx-auto py-6 px-4">
             <div className="text-center py-12">
               <div className="text-gray-400 text-6xl mb-4">❓</div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">
@@ -401,14 +395,13 @@ export default function SurveyDetailPage() {
               <p className="text-gray-500 mb-4">
                 指定されたアンケートは存在しないか、既に終了しています。
               </p>
-              <button
-                onClick={() => router.push('/surveys')}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md"
-              >
-                アンケート一覧に戻る
-              </button>
-            </div>
-          </main>
+            <button
+              onClick={() => router.push('/surveys')}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md"
+            >
+              アンケート一覧に戻る
+            </button>
+          </div>
         </div>
       </ProtectedRoute>
     )
@@ -417,9 +410,7 @@ export default function SurveyDetailPage() {
   if (hasResponded) {
     return (
       <ProtectedRoute>
-        <div className="min-h-screen bg-gray-50">
-          <Navbar />
-          <main className="max-w-4xl mx-auto py-6 px-4">
+        <div className="max-w-4xl mx-auto py-6 px-4">
             <div className="text-center py-12">
               <div className="text-green-400 text-6xl mb-4">✅</div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">
@@ -428,14 +419,13 @@ export default function SurveyDetailPage() {
               <p className="text-gray-500 mb-4">
                 このアンケートには既に回答いただいています。
               </p>
-              <button
-                onClick={() => router.push('/surveys')}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md"
-              >
-                他のアンケートを見る
-              </button>
-            </div>
-          </main>
+            <button
+              onClick={() => router.push('/surveys')}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md"
+            >
+              他のアンケートを見る
+            </button>
+          </div>
         </div>
       </ProtectedRoute>
     )
@@ -443,10 +433,7 @@ export default function SurveyDetailPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50">
-        <Navbar />
-        
-        <main className="max-w-4xl mx-auto py-6 px-4">
+      <div className="max-w-4xl mx-auto py-6 px-4">
           <div className="bg-white shadow rounded-lg p-6">
             {/* Survey Header */}
             <div className="mb-8">
@@ -525,9 +512,8 @@ export default function SurveyDetailPage() {
                   {submitting ? '送信中...' : '回答を送信'}
                 </button>
               </div>
-            </form>
-          </div>
-        </main>
+          </form>
+        </div>
       </div>
     </ProtectedRoute>
   )

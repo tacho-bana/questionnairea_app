@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import ProtectedRoute from '@/components/ProtectedRoute'
-import Navbar from '@/components/Navbar'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase-client'
 import { Database } from '@/types/database'
@@ -356,11 +355,8 @@ export default function MySurveyDetailPage() {
   if (loading) {
     return (
       <ProtectedRoute>
-        <div className="min-h-screen bg-gray-50">
-          <Navbar />
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          </div>
+        <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         </div>
       </ProtectedRoute>
     )
@@ -369,15 +365,12 @@ export default function MySurveyDetailPage() {
   if (!survey) {
     return (
       <ProtectedRoute>
-        <div className="min-h-screen bg-gray-50">
-          <Navbar />
-          <div className="max-w-4xl mx-auto py-6 px-4">
-            <div className="text-center">
-              <h1 className="text-2xl font-bold text-gray-900 mb-4">アンケートが見つかりません</h1>
-              <Link href="/dashboard" className="text-blue-600 hover:text-blue-500">
-                ダッシュボードに戻る
-              </Link>
-            </div>
+        <div className="max-w-4xl mx-auto py-6 px-4">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">アンケートが見つかりません</h1>
+            <Link href="/dashboard" className="text-blue-600 hover:text-blue-500">
+              ダッシュボードに戻る
+            </Link>
           </div>
         </div>
       </ProtectedRoute>
@@ -386,10 +379,7 @@ export default function MySurveyDetailPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50">
-        <Navbar />
-        
-        <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
           {/* Header */}
           <div className="mb-8">
             <div className="flex items-center space-x-4 mb-4">
@@ -781,8 +771,7 @@ export default function MySurveyDetailPage() {
               )}
             </div>
           </div>
-        </main>
-      </div>
-    </ProtectedRoute>
-  )
-}
+        </div>
+      </ProtectedRoute>
+    )
+  }
