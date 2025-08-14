@@ -26,12 +26,13 @@ CREATE TABLE surveys (
     description TEXT,
     category_id INTEGER REFERENCES categories(id),
     reward_points INTEGER NOT NULL,
-    total_budget INTEGER NOT NULL, -- 総予算
-    max_responses INTEGER,
+    total_budget INTEGER NOT NULL, -- 総予算（消費ポイント数）
+    max_responses INTEGER NOT NULL, -- 集めたい人数
     current_responses INTEGER DEFAULT 0,
-    status VARCHAR DEFAULT 'active', -- active, paused, closed
+    status VARCHAR DEFAULT 'active', -- active, paused, closed, expired
     is_data_for_sale BOOLEAN DEFAULT false,
     data_price INTEGER DEFAULT 0,
+    deadline TIMESTAMP, -- 締切日
     created_at TIMESTAMP DEFAULT NOW()
 );
 

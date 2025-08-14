@@ -67,9 +67,31 @@ ls -la
 -- データベースのセキュリティポリシーが設定される
 ```
 
-### 4. Google OAuth の設定
+### 5. ポイント管理システムの設定
 
-#### 4.1 Google Cloud Console での設定
+1. 引き続き **SQL Editor** で
+2. `supabase_point_management.sql` ファイルの内容をコピー&ペースト
+3. **RUN** ボタンをクリックしてポイント管理機能を設定
+
+```sql
+-- supabase_point_management.sql の内容を実行
+-- ストアドファンクションが作成される
+```
+
+### 5.1 締切管理システムの設定
+
+1. 引き続き **SQL Editor** で
+2. `supabase_deadline_management.sql` ファイルの内容をコピー&ペースト
+3. **RUN** ボタンをクリックして締切・返金機能を設定
+
+```sql
+-- supabase_deadline_management.sql の内容を実行
+-- トリガーとストアドファンクションが作成される
+```
+
+### 6. Google OAuth の設定
+
+#### 6.1 Google Cloud Console での設定
 
 1. [Google Cloud Console](https://console.cloud.google.com/) にアクセス
 2. 新しいプロジェクトを作成または既存のプロジェクトを選択
@@ -83,7 +105,7 @@ ls -la
    ```
 7. **クライアント ID** と **クライアントシークレット** をメモ
 
-#### 4.2 Supabase での Google OAuth 設定
+#### 6.2 Supabase での Google OAuth 設定
 
 1. Supabase ダッシュボードで **Authentication** > **Providers** に移動
 2. **Google** プロバイダーを有効にする
@@ -92,9 +114,9 @@ ls -la
    - **Client Secret**: 取得したクライアントシークレット
 4. **Save** をクリック
 
-### 5. 環境変数の設定
+### 7. 環境変数の設定
 
-#### 5.1 Supabase の認証情報を取得
+#### 7.1 Supabase の認証情報を取得
 
 1. Supabase ダッシュボードで **Settings** > **API** に移動
 2. 以下の情報をメモ:
@@ -102,7 +124,7 @@ ls -la
    - **anon public** key
    - **service_role** key (バックエンド用)
 
-#### 5.2 環境変数ファイルの作成
+#### 7.2 環境変数ファイルの作成
 
 **A. ルートディレクトリの環境変数**
 ```bash
@@ -155,7 +177,7 @@ SUPABASE_ANON_KEY=your-anon-key
 GEMINI_API_KEY=your-gemini-api-key
 ```
 
-### 6. Docker でアプリケーションを起動
+### 8. Docker でアプリケーションを起動
 
 ```bash
 # ルートディレクトリに戻る
@@ -168,7 +190,7 @@ docker-compose up --build
 docker-compose up -d --build
 ```
 
-### 7. アプリケーションへのアクセス
+### 9. アプリケーションへのアクセス
 
 起動が完了したら以下のURLにアクセス:
 

@@ -37,7 +37,7 @@ export default function AuthCallback() {
                   id: user.id,
                   email: user.email!,
                   username: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-                  points: 0,
+                  points: 100, // 初期ポイント100
                   reputation_score: 100,
                   is_banned: false,
                 },
