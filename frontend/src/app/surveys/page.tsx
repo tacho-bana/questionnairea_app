@@ -187,15 +187,6 @@ export default function SurveysPage() {
                 <div className="flex items-center justify-between text-sm text-gray-600">
                   <div className="flex items-center space-x-4">
                     <span>{surveys.length}件のアンケートが見つかりました</span>
-                    <span className="text-gray-400">•</span>
-                    <span className="text-blue-600 font-medium">
-                      {sortBy === 'newest' && '新着順'}
-                      {sortBy === 'oldest' && '古い順'}
-                      {sortBy === 'points_high' && 'ポイント高い順'}
-                      {sortBy === 'points_low' && 'ポイント低い順'}
-                      {sortBy === 'deadline_soon' && '締切近い順'}
-                      {sortBy === 'deadline_later' && '締切遠い順'}
-                    </span>
                   </div>
                   {(selectedCategory || searchTerm) && (
                     <button
@@ -217,11 +208,11 @@ export default function SurveysPage() {
 
             {/* Quick Sort Buttons */}
             <div className="mb-6 flex flex-wrap gap-2">
-              <span className="text-sm font-medium text-gray-700 flex items-center mr-2">クイック並び替え:</span>
+              <span className="text-sm font-medium text-gray-700 flex items-center mr-2">並び替え:</span>
               {[
-                { key: 'newest', label: '新着順', icon: '🆕' },
-                { key: 'points_high', label: '高ポイント', icon: '💰' },
-                { key: 'deadline_soon', label: '締切迫る', icon: '⏰' }
+                { key: 'newest', label: '新着順'},
+                { key: 'points_high', label: '高ポイント'},
+                { key: 'deadline_soon', label: '締切順'}
               ].map((item) => (
                 <button
                   key={item.key}
@@ -234,7 +225,6 @@ export default function SurveysPage() {
                     }
                   `}
                 >
-                  <span>{item.icon}</span>
                   <span>{item.label}</span>
                 </button>
               ))}
