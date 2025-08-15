@@ -2,26 +2,51 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
-  }
+/* ダークモード対応: 色を強制的にライトモードに固定 */
+html {
+  color-scheme: light !important;
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+  background-color: #f9fafb !important;
+  color: #111827 !important;
+}
+
+/* 入力フィールドのダークモード対策 */
+input, textarea, select {
+  background-color: white !important;
+  color: #111827 !important;
+  border: 1px solid #d1d5db !important;
+}
+
+input:focus, textarea:focus, select:focus {
+  background-color: white !important;
+  color: #111827 !important;
+  border-color: #3b82f6 !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+}
+
+/* プレースホルダーテキスト */
+input::placeholder, textarea::placeholder {
+  color: #6b7280 !important;
+}
+
+/* オートフィル対策 */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px white inset !important;
+  -webkit-text-fill-color: #111827 !important;
+}
+
+/* ボタンとリンクの色も固定 */
+button, a {
+  color: inherit !important;
+}
+
+/* 背景色が設定されている要素は維持 */
+.bg-white, .bg-gray-50, .bg-blue-50, .bg-green-50, .bg-red-50 {
+  background-color: var(--tw-bg-opacity) !important;
 }
