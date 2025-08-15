@@ -459,9 +459,7 @@ export default function Sidebar() {
                   flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200
                   ${isActive 
                     ? 'bg-blue-50 text-blue-700 border border-blue-200' 
-                    : item.highlight
-                      ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-sm'
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
                   }
                   ${isNavigating && pathname !== item.href ? 'opacity-70' : ''}
                 `}
