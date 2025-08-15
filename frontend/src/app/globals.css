@@ -50,3 +50,13 @@ button, a {
 .bg-white, .bg-gray-50, .bg-blue-50, .bg-green-50, .bg-red-50 {
   background-color: var(--tw-bg-opacity) !important;
 }
+
+/* サイドバーの背景色を強制固定 */
+[data-component="sidebar"], .sidebar {
+  background-color: white !important;
+}
+
+/* サイドバー内の子要素も白背景を維持 */
+.sidebar > *, [data-component="sidebar"] > * {
+  background-color: inherit;
+}

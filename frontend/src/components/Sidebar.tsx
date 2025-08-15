@@ -261,7 +261,7 @@ export default function Sidebar() {
 
       {/* Mobile overlay */}
       {isMobileMenuOpen && (
-        <div className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40" />
+        <div className="lg:hidden fixed inset-0 bg-black bg-opacity-70 z-40" style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)' }} />
       )}
 
       {/* Sidebar */}
@@ -270,6 +270,8 @@ export default function Sidebar() {
         className={`fixed inset-y-0 left-0 w-64 bg-white border-r border-gray-200 flex flex-col z-50 transform transition-transform duration-300 ease-in-out ${
           isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
+        style={{ backgroundColor: 'white' }}
+        data-component="sidebar"
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
@@ -382,7 +384,7 @@ export default function Sidebar() {
 
       {/* Mobile overlay */}
       {isMobileMenuOpen && (
-        <div className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40" />
+        <div className="lg:hidden fixed inset-0 bg-black bg-opacity-70 z-40" style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)' }} />
       )}
 
       {/* Sidebar */}
@@ -391,6 +393,8 @@ export default function Sidebar() {
         className={`fixed inset-y-0 left-0 w-64 bg-white border-r border-gray-200 flex flex-col z-50 transform transition-transform duration-300 ease-in-out ${
           isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
+        style={{ backgroundColor: 'white' }}
+        data-component="sidebar"
       >
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200">
