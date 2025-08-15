@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import ProtectedRoute from '@/components/ProtectedRoute'
+import ProfileSetup from '@/components/ProfileSetup'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase-client'
 import { Database } from '@/types/database'
@@ -15,6 +16,7 @@ export default function Dashboard() {
   const [userProfile, setUserProfile] = useState<any>(null)
   const [mySurveys, setMySurveys] = useState<Survey[]>([])
   const [recentTransactions, setRecentTransactions] = useState<PointTransaction[]>([])
+  const [showProfileSetup, setShowProfileSetup] = useState(false)
   const [stats, setStats] = useState({
     completedSurveys: 0,
     mySurveys: 0,
@@ -35,6 +37,11 @@ export default function Dashboard() {
         .single()
 
       setUserProfile(profile)
+      
+      // 新規ユーザーまたはプロフィール未完成の場合、プロフィール設定を表示
+      if (profile && !profile.profile_completed) {
+        setShowProfileSetup(true)
+      }
 
       // 自分が作成したアンケート
       const { data: mySurveysData, error: mySurveysError } = await supabase
@@ -73,8 +80,19 @@ export default function Dashboard() {
     }
   }
 
+  const handleProfileSetupComplete = () => {
+    setShowProfileSetup(false)
+    // プロフィールデータを再取得（少し遅延させてリアルタイム更新を反映）
+    setTimeout(() => {
+      fetchDashboardData()
+    }, 1500)
+  }
+
   return (
     <ProtectedRoute>
+      {showProfileSetup && (
+        <ProfileSetup onComplete={handleProfileSetupComplete} />
+      )}
       <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
             {/* Header */}
             <div className="mb-8">

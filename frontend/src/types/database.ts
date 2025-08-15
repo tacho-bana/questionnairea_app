@@ -5,30 +5,39 @@ export interface Database {
         Row: {
           id: string
           email: string
-          username: string
+          username: string | null
           points: number
           reputation_score: number
           is_banned: boolean
+          gender: string | null
+          birth_date: string | null
+          profile_completed: boolean
           created_at: string
           updated_at: string
         }
         Insert: {
           id?: string
           email: string
-          username: string
+          username?: string | null
           points?: number
           reputation_score?: number
           is_banned?: boolean
+          gender?: string | null
+          birth_date?: string | null
+          profile_completed?: boolean
           created_at?: string
           updated_at?: string
         }
         Update: {
           id?: string
           email?: string
-          username?: string
+          username?: string | null
           points?: number
           reputation_score?: number
           is_banned?: boolean
+          gender?: string | null
+          birth_date?: string | null
+          profile_completed?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -77,7 +86,34 @@ export interface Database {
           responses: any
           quality_score: number | null
           is_approved: boolean
+          respondent_gender: string | null
+          respondent_age: number | null
           submitted_at: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          survey_id: string
+          respondent_id: string
+          responses: any
+          quality_score?: number | null
+          is_approved?: boolean
+          respondent_gender?: string | null
+          respondent_age?: number | null
+          submitted_at?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          survey_id?: string
+          respondent_id?: string
+          responses?: any
+          quality_score?: number | null
+          is_approved?: boolean
+          respondent_gender?: string | null
+          respondent_age?: number | null
+          submitted_at?: string
+          created_at?: string
         }
       }
       point_transactions: {

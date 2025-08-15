@@ -30,6 +30,8 @@ export default function MySurveyDetailPage() {
   const [newDeadline, setNewDeadline] = useState('')
   const [analysisData, setAnalysisData] = useState<any>(null)
   const [showDangerZone, setShowDangerZone] = useState(false)
+  const [showAllResponses, setShowAllResponses] = useState(false)
+  const [csvPreviewData, setCsvPreviewData] = useState<any[]>([])
 
   useEffect(() => {
     console.log('User state:', user)
@@ -90,6 +92,9 @@ export default function MySurveyDetailPage() {
 
       // Generate analysis data
       generateAnalysisData(responsesData as SurveyResponse[], questionsData)
+      
+      // Generate CSV preview data
+      generateCsvPreviewData(responsesData as SurveyResponse[], questionsData)
 
     } catch (error: any) {
       console.error('Error fetching survey data:', error)
@@ -173,6 +178,42 @@ export default function MySurveyDetailPage() {
     setAnalysisData(analysis)
   }
 
+  const generateCsvPreviewData = (responsesData: SurveyResponse[], questionsData: SurveyQuestion[]) => {
+    if (!responsesData.length || !questionsData.length) return
+
+    // Helper function to get gender label
+    const getGenderLabel = (gender: string | null) => {
+      switch (gender) {
+        case 'male': return '男性'
+        case 'female': return '女性'
+        case 'other': return 'その他'
+        case 'prefer_not_to_say': return '回答しない'
+        default: return '未設定'
+      }
+    }
+
+    // Create CSV preview data (first 5 responses)
+    const previewData = responsesData.slice(0, 5).map((response, index) => {
+      const row: any = {
+        id: index + 1,
+        submitTime: new Date(response.submitted_at || response.created_at).toLocaleString('ja-JP'),
+        gender: getGenderLabel(response.respondent_gender),
+        age: response.respondent_age ? `${response.respondent_age}歳` : '未設定'
+      }
+      
+      // Add answers for each question from JSONB responses
+      questionsData.forEach(question => {
+        const responseData = response.responses as any
+        const answer = responseData ? responseData[question.id] : ''
+        row[`q_${question.id}`] = String(answer || '未回答')
+      })
+      
+      return row
+    })
+    
+    setCsvPreviewData(previewData)
+  }
+
   const handleUpdateDeadline = async () => {
     if (!survey || !newDeadline) return
 
@@ -198,7 +239,6 @@ export default function MySurveyDetailPage() {
 
     const confirmed = confirm(
       '募集を終了しますか？\n\n' +
-      '・アンケートのステータスが「終了」に変更されます\n' +
       '・新しい回答を受け付けなくなります\n' +
       `・未配布の${((survey.max_responses - survey.current_responses) * survey.reward_points).toLocaleString()}ポイントが返還されます`
     )
@@ -259,15 +299,44 @@ export default function MySurveyDetailPage() {
   const handleDeleteSurvey = async () => {
     if (!survey) return
 
-    const confirmed = confirm('本当にこのアンケートを削除しますか？未配布のポイントは返還されます。')
+    const confirmed = confirm('本当にこのアンケートを削除しますか？この操作は復元できません。')
     if (!confirmed) return
 
     try {
-      // Calculate refund amount
-      const unusedResponses = survey.max_responses - survey.current_responses
-      const refundAmount = unusedResponses * survey.reward_points
+      // Delete related data first to avoid foreign key constraints
+      // 1. Delete survey responses
+      const { error: deleteResponsesError } = await supabase
+        .from('survey_responses')
+        .delete()
+        .eq('survey_id', survey.id)
 
-      // Delete survey (this will cascade delete related data)
+      if (deleteResponsesError) throw deleteResponsesError
+
+      // 2. Delete survey questions
+      const { error: deleteQuestionsError } = await supabase
+        .from('survey_questions')
+        .delete()
+        .eq('survey_id', survey.id)
+
+      if (deleteQuestionsError) throw deleteQuestionsError
+
+      // 3. Delete point transactions related to this survey
+      const { error: deleteTransactionsError } = await supabase
+        .from('point_transactions')
+        .delete()
+        .eq('related_id', survey.id)
+
+      if (deleteTransactionsError) throw deleteTransactionsError
+
+      // 4. Delete data sales related to this survey (if exists)
+      const { error: deleteDataSalesError } = await supabase
+        .from('data_sales')
+        .delete()
+        .eq('survey_id', survey.id)
+
+      if (deleteDataSalesError) throw deleteDataSalesError
+
+      // 5. Finally delete the survey
       const { error: deleteError } = await supabase
         .from('surveys')
         .delete()
@@ -275,34 +344,7 @@ export default function MySurveyDetailPage() {
 
       if (deleteError) throw deleteError
 
-      // Refund points if there are unused responses
-      if (refundAmount > 0) {
-        // Add refund transaction
-        const { error: transactionError } = await supabase
-          .from('point_transactions')
-          .insert([
-            {
-              user_id: user?.id,
-              amount: refundAmount,
-              transaction_type: 'survey_refund',
-              related_id: survey.id,
-              description: `アンケート削除による返金: ${survey.title}`
-            }
-          ])
-
-        if (transactionError) throw transactionError
-
-        // Update user points
-        const { error: updatePointsError } = await supabase
-          .rpc('increment_user_points', {
-            user_id: user?.id,
-            amount: refundAmount
-          })
-
-        if (updatePointsError) throw updatePointsError
-      }
-
-      alert(`アンケートを削除しました。${refundAmount > 0 ? `${refundAmount.toLocaleString()}ポイントを返金しました。` : ''}`)
+      alert('アンケートを削除しました。')
       router.push('/dashboard')
     } catch (error: any) {
       console.error('Error deleting survey:', error)
@@ -313,15 +355,27 @@ export default function MySurveyDetailPage() {
   const downloadCSV = () => {
     if (!survey || !questions || !responses) return
 
-    // Create CSV headers
-    const headers = ['回答者ID', '回答者名', '回答日時', ...questions.map(q => q.question_text)]
+    // Helper function to get gender label
+    const getGenderLabel = (gender: string | null) => {
+      switch (gender) {
+        case 'male': return '男性'
+        case 'female': return '女性'
+        case 'other': return 'その他'
+        case 'prefer_not_to_say': return '回答しない'
+        default: return '未設定'
+      }
+    }
+
+    // Create CSV headers including demographic data
+    const headers = ['回答番号', '回答日時', '性別', '年齢', ...questions.map(q => q.question_text)]
     
     // Create CSV data
-    const csvData = responses.map(response => {
+    const csvData = responses.map((response, index) => {
       const row = [
-        response.respondent_id,
-        response.users?.username || response.users?.email || '匿名',
-        new Date(response.submitted_at || response.created_at).toLocaleString('ja-JP')
+        index + 1, // 回答番号（1から開始）
+        new Date(response.submitted_at || response.created_at).toLocaleString('ja-JP'),
+        getGenderLabel(response.respondent_gender),
+        response.respondent_age ? `${response.respondent_age}歳` : '未設定'
       ]
       
       // Add answers for each question from JSONB responses
@@ -382,26 +436,41 @@ export default function MySurveyDetailPage() {
       <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
           {/* Header */}
           <div className="mb-8">
-            <div className="flex items-center space-x-4 mb-4">
-              <Link 
-                href="/dashboard"
-                className="text-gray-600 hover:text-gray-900 transition-colors duration-200"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </Link>
-              <h1 className="text-3xl font-bold text-gray-900">{survey.title}</h1>
-              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                survey.status === 'active' ? 'bg-green-100 text-green-800' : 
-                survey.status === 'completed' ? 'bg-blue-100 text-blue-800' :
-                survey.status === 'closed' ? 'bg-yellow-100 text-yellow-800' :
-                'bg-gray-100 text-gray-800'
-              }`}>
-                {survey.status === 'active' ? '実施中' : 
-                 survey.status === 'completed' ? '完了' : 
-                 survey.status === 'closed' ? '募集終了' : '終了'}
-              </span>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-4">
+                <Link 
+                  href="/dashboard"
+                  className="text-gray-600 hover:text-gray-900 transition-colors duration-200"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </Link>
+                <h1 className="text-3xl font-bold text-gray-900">{survey.title}</h1>
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                  survey.status === 'active' ? 'bg-green-100 text-green-800' : 
+                  survey.status === 'completed' ? 'bg-blue-100 text-blue-800' :
+                  survey.status === 'closed' ? 'bg-yellow-100 text-yellow-800' :
+                  'bg-gray-100 text-gray-800'
+                }`}>
+                  {survey.status === 'active' ? '実施中' : 
+                   survey.status === 'completed' ? '完了' : 
+                   survey.status === 'closed' ? '募集終了' : '終了'}
+                </span>
+              </div>
+              
+              {/* Delete Button - Only show for closed surveys */}
+              {survey?.status === 'closed' && (
+                <button
+                  onClick={() => setShowDangerZone(!showDangerZone)}
+                  className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  削除
+                </button>
+              )}
             </div>
             <p className="text-gray-600">{survey.description}</p>
           </div>
@@ -465,109 +534,146 @@ export default function MySurveyDetailPage() {
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="bg-white shadow-lg rounded-2xl p-6 border border-gray-100 mb-8">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">管理メニュー</h3>
-            
-            {/* Main Actions */}
-            <div className="flex flex-wrap gap-4 mb-6">
-              <button
-                onClick={downloadCSV}
-                disabled={responses.length === 0}
-                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-              >
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                CSVダウンロード
-              </button>
-
-              <button
-                onClick={() => setIsEditing(!isEditing)}
-                disabled={survey?.status !== 'active'}
-                className="flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-              >
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-                締切編集
-              </button>
-
-              {survey?.status === 'active' && (
+          {/* Quick Actions Bar */}
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-4 mb-8 border border-blue-100">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex flex-wrap gap-3">
                 <button
-                  onClick={handleCloseSurvey}
-                  className="flex items-center px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors duration-200"
+                  onClick={downloadCSV}
+                  disabled={responses.length === 0}
+                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
                 >
                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m0 0v2m0-2h2m-2 0H10m8-8.414l-1.293-1.293a1 1 0 00-1.414 0L12 9.586l-3.293-3.293a1 1 0 00-1.414 0L6 7.586A2 2 0 015.586 6H4a2 2 0 00-2 2v1.586A2 2 0 002.586 10L9 16.414a2 2 0 002.828 0L18.414 10A2 2 0 0019 8.586V7a2 2 0 00-2-2h-1.586A2 2 0 0014 5.586L13 4.586a1 1 0 00-1.414 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
-                  募集終了
+                  CSVダウンロード
                 </button>
-              )}
-            </div>
 
-            {/* Danger Zone (collapsible) */}
-            <div className="border-t border-gray-200 pt-6">
-              <button
-                onClick={() => setShowDangerZone(!showDangerZone)}
-                className="flex items-center text-sm text-gray-500 hover:text-gray-700 transition-colors duration-200"
-              >
-                <svg className={`w-4 h-4 mr-1 transition-transform duration-200 ${showDangerZone ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-                危険操作
-              </button>
-              
-              {showDangerZone && (
-                <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <div className="flex items-start space-x-3">
-                    <svg className="w-5 h-5 text-red-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                <button
+                  onClick={() => setIsEditing(!isEditing)}
+                  disabled={survey?.status !== 'active'}
+                  className="flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  締切編集
+                </button>
+
+                {survey?.status === 'active' && (
+                  <button
+                    onClick={handleCloseSurvey}
+                    className="flex items-center px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m0 0v2m0-2h2m-2 0H10m8-8.414l-1.293-1.293a1 1 0 00-1.414 0L12 9.586l-3.293-3.293a1 1 0 00-1.414 0L6 7.586A2 2 0 005.586 6H4a2 2 0 00-2 2v1.586A2 2 0 002.586 10L9 16.414a2 2 0 002.828 0L18.414 10A2 2 0 0019 8.586V7a2 2 0 00-2-2h-1.586A2 2 0 0014 5.586L13 4.586a1 1 0 00-1.414 0z" />
                     </svg>
-                    <div className="flex-1">
-                      <h4 className="text-sm font-medium text-red-800 mb-2">アンケートを削除</h4>
-                      <p className="text-xs text-red-700 mb-3">
-                        この操作は取り消せません。アンケート、回答データ、関連する全ての情報が完全に削除されます。
-                      </p>
-                      <button
-                        onClick={handleDeleteSurvey}
-                        className="text-xs bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition-colors duration-200"
-                      >
-                        完全に削除する
-                      </button>
+                    募集終了
+                  </button>
+                )}
+              </div>
+              
+              <div className="text-sm text-gray-600 bg-white px-3 py-2 rounded-lg shadow-sm">
+                最終更新: {new Date(survey.updated_at || survey.created_at).toLocaleDateString('ja-JP')}
+              </div>
+            </div>
+          </div>
+
+          {/* Danger Zone (modal-like overlay when shown) */}
+          {showDangerZone && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-red-800">アンケートの削除</h3>
+                  <button
+                    onClick={() => setShowDangerZone(false)}
+                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                
+                <div className="flex items-start space-x-3 mb-6">
+                  <svg className="w-8 h-8 text-red-500 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                  <div className="flex-1">
+                    <h4 className="text-base font-semibold text-gray-900 mb-3">本当に削除しますか？</h4>
+                    <div className="text-sm text-gray-700 mb-4 space-y-2">
+                      <p className="font-medium text-red-700">⚠️ この操作は復元できません</p>
+                      <ul className="space-y-1 text-gray-600">
+                        <li>• アンケートと全ての回答データが削除されます</li>
+                        <li>• 関連する取引履歴も削除されます</li>
+                        <li>• 募集終了済みのアンケートのみ削除可能です</li>
+                      </ul>
                     </div>
                   </div>
                 </div>
-              )}
+                
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowDangerZone(false)}
+                    className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors duration-200 font-medium"
+                  >
+                    キャンセル
+                  </button>
+                  <button
+                    onClick={handleDeleteSurvey}
+                    className="flex-1 inline-flex items-center justify-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200 font-medium"
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    削除する
+                  </button>
+                </div>
+              </div>
             </div>
+          )}
 
-            {/* Deadline Edit Form */}
-            {isEditing && (
-              <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                <h4 className="font-medium text-gray-900 mb-3">締切日の変更</h4>
-                <div className="flex items-center space-x-4">
+          {/* Deadline Edit Form */}
+          {isEditing && (
+            <div className="bg-white shadow-lg rounded-2xl p-6 border border-gray-100 mb-8">
+              <div className="flex items-center mb-4">
+                <svg className="w-5 h-5 text-orange-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <h4 className="text-lg font-semibold text-gray-900">締切日の変更</h4>
+              </div>
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4">
+                <p className="text-sm text-orange-800">
+                  締切日を延長することで、より多くの回答を収集できます。
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">新しい締切日時</label>
                   <input
                     type="datetime-local"
                     value={newDeadline}
                     onChange={(e) => setNewDeadline(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
+                </div>
+                <div className="flex gap-2">
                   <button
                     onClick={handleUpdateDeadline}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium"
                   >
                     更新
                   </button>
                   <button
                     onClick={() => setIsEditing(false)}
-                    className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors duration-200"
+                    className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors duration-200 font-medium"
                   >
                     キャンセル
                   </button>
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Data Analysis */}
           {analysisData && responses.length > 0 && (
@@ -668,7 +774,7 @@ export default function MySurveyDetailPage() {
           )}
 
           {/* Survey Details */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
             {/* Survey Information */}
             <div className="bg-white shadow-lg rounded-2xl p-6 border border-gray-100">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">アンケート情報</h3>
@@ -721,43 +827,160 @@ export default function MySurveyDetailPage() {
               </div>
             </div>
 
-            {/* Responses Summary */}
+            {/* CSV Preview */}
             <div className="bg-white shadow-lg rounded-2xl p-6 border border-gray-100">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">回答サマリー</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">回答データプレビュー</h3>
+                {responses.length > 5 && (
+                  <button
+                    onClick={() => setShowAllResponses(!showAllResponses)}
+                    className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors duration-200"
+                  >
+                    {showAllResponses ? '簡単表示に戻る' : `さらに見る (${responses.length}件)`}
+                  </button>
+                )}
+              </div>
               
               {responses.length > 0 ? (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="text-center p-4 bg-blue-50 rounded-lg">
-                      <p className="text-2xl font-bold text-blue-600">{responses.length}</p>
-                      <p className="text-sm text-blue-600">総回答数</p>
+                  {/* Preview Stats */}
+                  <div className="grid grid-cols-3 gap-4 mb-6">
+                    <div className="text-center p-3 bg-blue-50 rounded-lg">
+                      <p className="text-xl font-bold text-blue-600">{responses.length}</p>
+                      <p className="text-xs text-blue-600">総回答数</p>
                     </div>
-                    <div className="text-center p-4 bg-green-50 rounded-lg">
-                      <p className="text-2xl font-bold text-green-600">
+                    <div className="text-center p-3 bg-green-50 rounded-lg">
+                      <p className="text-xl font-bold text-green-600">
                         {Math.round((responses.length / survey.max_responses) * 100)}%
                       </p>
-                      <p className="text-sm text-green-600">完了率</p>
+                      <p className="text-xs text-green-600">達成率</p>
+                    </div>
+                    <div className="text-center p-3 bg-purple-50 rounded-lg">
+                      <p className="text-xl font-bold text-purple-600">{questions.length}</p>
+                      <p className="text-xs text-purple-600">質問数</p>
                     </div>
                   </div>
 
-                  <div>
-                    <h4 className="font-medium text-gray-900 mb-3">最近の回答者</h4>
-                    <div className="space-y-2 max-h-60 overflow-y-auto">
-                      {responses.slice(-5).reverse().map((response) => (
-                        <div key={response.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">
-                              {response.users?.username || '匿名ユーザー'}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {new Date(response.submitted_at || response.created_at).toLocaleString('ja-JP')}
-                            </p>
-                          </div>
-                          <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                            +{survey.reward_points}pt
-                          </span>
-                        </div>
-                      ))}
+                  {/* CSV Table Preview */}
+                  <div className="overflow-hidden border border-gray-200 rounded-lg">
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10">
+                              #
+                            </th>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">
+                              回答日時
+                            </th>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">
+                              性別
+                            </th>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[60px]">
+                              年齢
+                            </th>
+                            {questions.map((question, index) => (
+                              <th key={question.id} className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">
+                                Q{index + 1}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {(showAllResponses ? responses : csvPreviewData).map((response, rowIndex) => {
+                            const responseData = showAllResponses ? response : null
+                            
+                            // Helper function for displaying demographic data
+                            const getGenderLabel = (gender: string | null) => {
+                              switch (gender) {
+                                case 'male': return '男性'
+                                case 'female': return '女性'
+                                case 'other': return 'その他'
+                                case 'prefer_not_to_say': return '回答しない'
+                                default: return '未設定'
+                              }
+                            }
+                            
+                            return (
+                              <tr key={showAllResponses ? response.id : rowIndex} className="hover:bg-gray-50">
+                                <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900 sticky left-0 bg-white z-10">
+                                  {showAllResponses ? rowIndex + 1 : response.id}
+                                </td>
+                                <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-600">
+                                  {showAllResponses 
+                                    ? new Date(response.submitted_at || response.created_at).toLocaleDateString('ja-JP', {
+                                        month: 'short',
+                                        day: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                      })
+                                    : response.submitTime
+                                  }
+                                </td>
+                                <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-600">
+                                  {showAllResponses 
+                                    ? getGenderLabel(responseData?.respondent_gender) 
+                                    : response.gender
+                                  }
+                                </td>
+                                <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-600">
+                                  {showAllResponses 
+                                    ? (responseData?.respondent_age ? `${responseData.respondent_age}歳` : '未設定')
+                                    : response.age
+                                  }
+                                </td>
+                                {questions.map((question) => {
+                                  let cellValue = '未回答'
+                                  if (showAllResponses && responseData) {
+                                    const responses_data = responseData.responses as any
+                                    cellValue = responses_data ? (responses_data[question.id] || '未回答') : '未回答'
+                                  } else if (!showAllResponses) {
+                                    cellValue = response[`q_${question.id}`] || '未回答'
+                                  }
+                                  
+                                  return (
+                                    <td key={question.id} className="px-3 py-2 text-sm text-gray-600 max-w-[200px]">
+                                      <div className="truncate" title={String(cellValue)}>
+                                        {Array.isArray(cellValue) ? cellValue.join(', ') : String(cellValue)}
+                                      </div>
+                                    </td>
+                                  )
+                                })}
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Show more info */}
+                  {!showAllResponses && responses.length > 5 && (
+                    <div className="text-center py-3 bg-gray-50 rounded-lg">
+                      <p className="text-sm text-gray-500">
+                        上位5件を表示中。全{responses.length}件の回答データを確認するには「さらに見る」をクリック
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Quick Actions */}
+                  <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                    <div className="text-sm text-gray-600">
+                      {showAllResponses 
+                        ? `全データ表示中 (${responses.length}/${responses.length}件)` 
+                        : `プレビュー表示中 (${Math.min(5, responses.length)}/${responses.length}件)`
+                      }
+                    </div>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={downloadCSV}
+                        className="inline-flex items-center px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors duration-200"
+                      >
+                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        CSV出力
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -766,7 +989,8 @@ export default function MySurveyDetailPage() {
                   <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
-                  <p className="text-gray-500">まだ回答がありません</p>
+                  <h4 className="text-lg font-medium text-gray-900 mb-2">回答データなし</h4>
+                  <p className="text-gray-500">まだ回答がありません。アンケートが公開されると、ここに回答データが表示されます。</p>
                 </div>
               )}
             </div>

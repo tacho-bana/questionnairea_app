@@ -16,10 +16,60 @@ export default function Sidebar() {
   const [isNavigating, setIsNavigating] = useState(false)
   const userMenuRef = useRef<HTMLDivElement>(null)
   const sidebarRef = useRef<HTMLDivElement>(null)
+  const lastFetchTime = useRef<number>(0)
 
   useEffect(() => {
     if (user) {
       fetchUserProfile()
+      
+      // Supabaseリアルタイム購読を設定
+      const subscription = supabase
+        .channel('user-profile-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'users',
+            filter: `id=eq.${user.id}`
+          },
+          (payload) => {
+            console.log('User profile updated:', payload)
+            // リアルタイムでプロフィールを更新
+            setUserProfile(payload.new)
+            
+            // キャッシュも更新
+            const cacheKey = `userProfile_${user.id}`
+            localStorage.setItem(cacheKey, JSON.stringify({
+              data: payload.new,
+              timestamp: Date.now()
+            }))
+            
+            // ポイント変更の場合はUIにフィードバックを提供
+            if (payload.old?.points !== payload.new?.points) {
+              console.log('Points updated from', payload.old?.points, 'to', payload.new?.points)
+            }
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'point_transactions',
+            filter: `user_id=eq.${user.id}`
+          },
+          (payload) => {
+            console.log('New point transaction:', payload)
+            // ポイント取引が発生したら即座にプロフィールを再取得
+            fetchUserProfile(true)
+          }
+        )
+        .subscribe()
+
+      return () => {
+        subscription.unsubscribe()
+      }
     }
   }, [user])
 
@@ -33,13 +83,34 @@ export default function Sidebar() {
       }
     }
 
+    // ページフォーカス時にポイント更新
+    const handleFocus = () => {
+      if (user) {
+        console.log('Page focused, refreshing user profile for updated points')
+        fetchUserProfile(true)
+      }
+    }
+
+    // ページの可視性変更時にポイント更新
+    const handleVisibilityChange = () => {
+      if (!document.hidden && user) {
+        console.log('Page became visible, refreshing user profile for updated points')
+        fetchUserProfile(true)
+      }
+    }
+
     document.addEventListener('mousedown', handleClickOutside)
+    window.addEventListener('focus', handleFocus)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
+      window.removeEventListener('focus', handleFocus)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [])
+  }, [user])
 
-  // ナビゲーション状態の監視
+  // ナビゲーション状態の監視とポイント更新
   useEffect(() => {
     const handleRouteChangeStart = () => {
       setIsNavigating(true)
@@ -48,26 +119,51 @@ export default function Sidebar() {
     const handleRouteChangeComplete = () => {
       setIsNavigating(false)
       setIsMobileMenuOpen(false) // モバイルメニューを閉じる
+      
+      // ページ遷移完了時にポイントを更新（キャッシュを無視）
+      if (user) {
+        console.log('Route changed, refreshing user profile for updated points')
+        fetchUserProfile(true)
+      }
     }
 
     // Next.js App Routerでのページ遷移は直接監視できないため、pathname変更を監視
     setIsNavigating(false)
-  }, [pathname])
+    
+    // ページ遷移時にポイント更新
+    if (user) {
+      setTimeout(() => {
+        fetchUserProfile(true)
+      }, 100)
+    }
+  }, [pathname, user])
 
-  const fetchUserProfile = async () => {
+  const fetchUserProfile = async (forceRefresh = false) => {
     try {
-      // キャッシュから読み込みを試行
       const cacheKey = `userProfile_${user?.id}`
-      const cachedProfile = localStorage.getItem(cacheKey)
+      const now = Date.now()
       
-      if (cachedProfile) {
-        const parsed = JSON.parse(cachedProfile)
-        // キャッシュが5分以内であれば使用
-        if (Date.now() - parsed.timestamp < 5 * 60 * 1000) {
-          setUserProfile(parsed.data)
-          return
+      // 連続呼び出し防止（1秒以内の重複呼び出しを防ぐ）
+      if (!forceRefresh && now - lastFetchTime.current < 1000) {
+        console.log('Skipping profile fetch due to rate limit')
+        return
+      }
+      
+      if (!forceRefresh) {
+        // キャッシュから読み込みを試行（期間を30秒に短縮）
+        const cachedProfile = localStorage.getItem(cacheKey)
+        
+        if (cachedProfile) {
+          const parsed = JSON.parse(cachedProfile)
+          // キャッシュが30秒以内であれば使用
+          if (Date.now() - parsed.timestamp < 30 * 1000) {
+            setUserProfile(parsed.data)
+            return
+          }
         }
       }
+      
+      lastFetchTime.current = now
 
       const { data, error } = await supabase
         .from('users')
@@ -197,6 +293,15 @@ export default function Sidebar() {
                 </svg>
                 <span className="text-sm font-medium text-blue-100">保有ポイント</span>
               </div>
+              <button
+                onClick={() => fetchUserProfile(true)}
+                className="text-blue-100 hover:text-white transition-colors p-1 rounded"
+                title="ポイントを更新"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              </button>
             </div>
             <div className="mt-2">
               <div className="h-8 bg-white bg-opacity-20 rounded animate-pulse"></div>
@@ -309,12 +414,27 @@ export default function Sidebar() {
               </svg>
               <span className="text-sm font-medium text-blue-100">保有ポイント</span>
             </div>
+            <button
+              onClick={() => fetchUserProfile(true)}
+              className="text-blue-100 hover:text-white transition-colors p-1 rounded"
+              title="ポイントを更新"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
           </div>
           <div className="mt-2">
-            <span className="text-2xl font-bold text-white">
-              {userProfile?.points?.toLocaleString() || 0}
-            </span>
-            <span className="text-blue-100 text-sm ml-1">pt</span>
+            <button
+              onClick={() => fetchUserProfile(true)}
+              className="text-left hover:bg-blue-600 hover:bg-opacity-30 rounded-lg p-1 -m-1 transition-colors duration-200"
+              title="クリックでポイントを更新"
+            >
+              <span className="text-2xl font-bold text-white">
+                {userProfile?.points?.toLocaleString() || 0}
+              </span>
+              <span className="text-blue-100 text-sm ml-1">pt</span>
+            </button>
           </div>
         </div>
       </div>
@@ -384,6 +504,17 @@ export default function Sidebar() {
           {/* Dropdown Menu */}
           {isUserMenuOpen && (
             <div className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-lg shadow-lg border border-gray-200 py-1">
+              <Link
+                href="/settings"
+                onClick={() => setIsUserMenuOpen(false)}
+                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200 flex items-center space-x-2"
+              >
+                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <span>設定</span>
+              </Link>
               <button
                 onClick={() => {
                   handleSignOut()

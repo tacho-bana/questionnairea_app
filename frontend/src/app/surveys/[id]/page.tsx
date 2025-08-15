@@ -25,6 +25,7 @@ export default function SurveyDetailPage() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [hasResponded, setHasResponded] = useState(false)
+  const [userProfile, setUserProfile] = useState<any>(null)
 
   useEffect(() => {
     if (user && surveyId) {
@@ -35,6 +36,15 @@ export default function SurveyDetailPage() {
 
   const fetchSurveyData = async () => {
     try {
+      // Fetch user profile for demographic data
+      const { data: profileData } = await supabase
+        .from('users')
+        .select('gender, birth_date')
+        .eq('id', user?.id)
+        .single()
+      
+      setUserProfile(profileData)
+
       // Fetch survey details
       const { data: surveyData, error: surveyError } = await supabase
         .from('surveys')
@@ -153,7 +163,22 @@ export default function SurveyDetailPage() {
         return
       }
 
-      // Create response record
+      // Calculate respondent age from birth_date
+      let respondentAge = null
+      if (userProfile?.birth_date) {
+        const today = new Date()
+        const birthDate = new Date(userProfile.birth_date)
+        let age = today.getFullYear() - birthDate.getFullYear()
+        const monthDiff = today.getMonth() - birthDate.getMonth()
+        
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+          age--
+        }
+        
+        respondentAge = age
+      }
+
+      // Create response record with demographic data
       const { data: responseData, error: responseError } = await supabase
         .from('survey_responses')
         .insert([
@@ -161,6 +186,8 @@ export default function SurveyDetailPage() {
             survey_id: surveyId,
             respondent_id: user.id,
             responses: responses,
+            respondent_gender: userProfile?.gender || null,
+            respondent_age: respondentAge,
             is_approved: true // Will be updated after quality check
           }
         ])
@@ -206,8 +233,14 @@ export default function SurveyDetailPage() {
         // Don't throw error, just log it
       }
 
-      alert(`回答ありがとうございました！${survey.reward_points}ポイントを獲得しました！`)
-      router.push('/surveys')
+      // リアルタイムでポイント更新を反映するために少し待つ
+      setTimeout(() => {
+        alert(`回答ありがとうございました！${survey.reward_points}ポイントを獲得しました！`)
+        // ページ遷移前にキャッシュをクリアしてポイント更新を保証
+        const cacheKey = `userProfile_${user.id}`
+        localStorage.removeItem(cacheKey)
+        router.push('/surveys')
+      }, 1000)
 
     } catch (error: any) {
       console.error('Error submitting response:', error)
