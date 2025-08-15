@@ -62,7 +62,7 @@ export default function MySurveyDetailPage() {
 
       if (surveyError) throw surveyError
       setSurvey(surveyData as Survey)
-      setNewDeadline(surveyData.deadline || '')
+      setNewDeadline((surveyData as any).deadline || '')
 
       // Survey questions
       const { data: questionsData, error: questionsError } = await supabase
@@ -225,7 +225,7 @@ export default function MySurveyDetailPage() {
 
       if (error) throw error
 
-      setSurvey({ ...survey, deadline: newDeadline })
+      setSurvey({ ...survey, deadline: newDeadline } as any)
       setIsEditing(false)
       alert('締切日を更新しました')
     } catch (error: any) {
@@ -240,13 +240,13 @@ export default function MySurveyDetailPage() {
     const confirmed = confirm(
       '募集を終了しますか？\n\n' +
       '・新しい回答を受け付けなくなります\n' +
-      `・未配布の${((survey.max_responses - survey.current_responses) * survey.reward_points).toLocaleString()}ポイントが返還されます`
+      `・未配布の${(((survey.max_responses || 0) - survey.current_responses) * survey.reward_points).toLocaleString()}ポイントが返還されます`
     )
     if (!confirmed) return
 
     try {
       // Calculate refund amount
-      const unusedResponses = survey.max_responses - survey.current_responses
+      const unusedResponses = (survey.max_responses || 0) - survey.current_responses
       const refundAmount = unusedResponses * survey.reward_points
 
       // Update survey status to closed
@@ -486,7 +486,7 @@ export default function MySurveyDetailPage() {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">回答数</p>
-                  <p className="text-2xl font-bold text-gray-900">{survey.current_responses}/{survey.max_responses}</p>
+                  <p className="text-2xl font-bold text-gray-900">{survey.current_responses}/{survey.max_responses || 0}</p>
                 </div>
               </div>
             </div>
@@ -514,7 +514,7 @@ export default function MySurveyDetailPage() {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">残りポイント</p>
-                  <p className="text-2xl font-bold text-gray-900">{((survey.max_responses - survey.current_responses) * survey.reward_points).toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-gray-900">{(((survey.max_responses || 0) - survey.current_responses) * survey.reward_points).toLocaleString()}</p>
                 </div>
               </div>
             </div>
@@ -528,7 +528,7 @@ export default function MySurveyDetailPage() {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">進捗率</p>
-                  <p className="text-2xl font-bold text-gray-900">{Math.round((survey.current_responses / survey.max_responses) * 100)}%</p>
+                  <p className="text-2xl font-bold text-gray-900">{Math.round((survey.current_responses / (survey.max_responses || 1)) * 100)}%</p>
                 </div>
               </div>
             </div>
@@ -574,7 +574,7 @@ export default function MySurveyDetailPage() {
               </div>
               
               <div className="text-sm text-gray-600 bg-white px-3 py-2 rounded-lg shadow-sm">
-                最終更新: {new Date(survey.updated_at || survey.created_at).toLocaleDateString('ja-JP')}
+                作成日: {new Date(survey.created_at).toLocaleDateString('ja-JP')}
               </div>
             </div>
           </div>
@@ -690,7 +690,7 @@ export default function MySurveyDetailPage() {
                       <div className="flex-1 bg-gray-200 rounded-full h-4 relative">
                         <div 
                           className="bg-blue-500 h-4 rounded-full transition-all duration-300"
-                          style={{ width: `${(count / Math.max(...Object.values(analysisData.responseTimeline))) * 100}%` }}
+                          style={{ width: `${(count / Math.max(...Object.values(analysisData.responseTimeline).map(v => Number(v) || 0))) * 100}%` }}
                         ></div>
                       </div>
                       <span className="text-sm font-medium text-gray-900 w-8">{count}</span>
@@ -755,7 +755,7 @@ export default function MySurveyDetailPage() {
                           <div className="space-y-2 max-h-48 overflow-y-auto">
                             {questionAnalysis.responses.map((response: string, index: number) => (
                               <div key={index} className="p-3 bg-gray-50 rounded-lg text-sm text-gray-700">
-                                "{response}"
+                                &ldquo;{response}&rdquo;
                               </div>
                             ))}
                           </div>
@@ -790,7 +790,7 @@ export default function MySurveyDetailPage() {
                 <div>
                   <span className="text-sm font-medium text-gray-600">締切:</span>
                   <span className="ml-2 text-sm text-gray-900">
-                    {survey.deadline ? new Date(survey.deadline).toLocaleString('ja-JP') : '設定なし'}
+                    {(survey as any).deadline ? new Date((survey as any).deadline).toLocaleString('ja-JP') : '設定なし'}
                   </span>
                 </div>
                 <div>
@@ -851,7 +851,7 @@ export default function MySurveyDetailPage() {
                     </div>
                     <div className="text-center p-3 bg-green-50 rounded-lg">
                       <p className="text-xl font-bold text-green-600">
-                        {Math.round((responses.length / survey.max_responses) * 100)}%
+                        {Math.round((responses.length / (survey.max_responses || 1)) * 100)}%
                       </p>
                       <p className="text-xs text-green-600">達成率</p>
                     </div>

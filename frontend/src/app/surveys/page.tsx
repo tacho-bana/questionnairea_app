@@ -271,21 +271,21 @@ export default function SurveysPage() {
                         <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
                           <div 
                             className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-300"
-                            style={{ width: `${Math.min((survey.current_responses / survey.max_responses) * 100, 100)}%` }}
+                            style={{ width: `${Math.min((survey.current_responses / (survey.max_responses || 1)) * 100, 100)}%` }}
                           ></div>
                         </div>
                         <div className="mt-1 text-xs text-gray-400">
-                          残り{survey.max_responses - survey.current_responses}人
+                          残り{(survey.max_responses || 0) - survey.current_responses}人
                         </div>
                       </div>
 
                       {/* Additional Info */}
                       <div className="space-y-1 text-sm text-gray-500 mb-4">
-                        {survey.deadline && (
+                        {(survey as any).deadline && (
                           <div className="flex justify-between">
                             <span>締切:</span>
                             <span>
-                              {new Date(survey.deadline).toLocaleDateString('ja-JP', {
+                              {new Date((survey as any).deadline).toLocaleDateString('ja-JP', {
                                 month: 'short',
                                 day: 'numeric',
                                 hour: '2-digit',

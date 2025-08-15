@@ -158,7 +158,7 @@ export default function SurveyDetailPage() {
       }
 
       // Check if survey is expired
-      if (survey.deadline && new Date(survey.deadline) < new Date()) {
+      if ((survey as any).deadline && new Date((survey as any).deadline) < new Date()) {
         alert('このアンケートは締切を過ぎています')
         return
       }
@@ -496,9 +496,9 @@ export default function SurveyDetailPage() {
                 </div>
                 <div className="space-y-1">
                   <div>作成日: {new Date(survey.created_at).toLocaleDateString('ja-JP')}</div>
-                  {survey.deadline && (
+                  {(survey as any).deadline && (
                     <div>
-                      締切: {new Date(survey.deadline).toLocaleDateString('ja-JP', {
+                      締切: {new Date((survey as any).deadline).toLocaleDateString('ja-JP', {
                         year: 'numeric',
                         month: 'short',
                         day: 'numeric',
