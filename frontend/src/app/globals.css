@@ -60,3 +60,26 @@ button, a {
 .sidebar > *, [data-component="sidebar"] > * {
   background-color: inherit;
 }
+
+/* モーダルとダイアログの背景色を強制固定 */
+.fixed.inset-0 {
+  background-color: rgba(0, 0, 0, 0.5) !important;
+}
+
+/* モーダル内のコンテンツ背景を白に固定 */
+.fixed .bg-white, .modal .bg-white {
+  background-color: white !important;
+}
+
+/* ボタンとフォーム要素の背景色も明示的に指定 */
+.bg-blue-600, .bg-blue-700 {
+  background-color: #2563eb !important;
+}
+
+.bg-gray-100 {
+  background-color: #f3f4f6 !important;
+}
+
+.bg-green-50 {
+  background-color: #f0fdf4 !important;
+}
