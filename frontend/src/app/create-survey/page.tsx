@@ -262,7 +262,7 @@ export default function CreateSurveyPage() {
                 <div className="space-y-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      タイトル *
+                      タイトル <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -290,7 +290,7 @@ export default function CreateSurveyPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        カテゴリ *
+                        カテゴリ <span className="text-red-500">*</span>
                       </label>
                       <select
                         required
@@ -329,37 +329,59 @@ export default function CreateSurveyPage() {
 
                 <div className="space-y-6">
                   {/* Quick Settings */}
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <h4 className="text-sm font-medium text-gray-900 mb-3">クイック設定</h4>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-6">
+                    <div className="flex items-center mb-4">
+                      <svg className="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                      <h4 className="text-sm font-semibold text-blue-900">おすすめプリセット</h4>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                       {[
-                        { budget: 1000, responses: 10, label: '低予算' },
-                        { budget: 2000, responses: 20, label: '標準' },
-                        { budget: 5000, responses: 50, label: '中規模' },
-                        { budget: 10000, responses: 100, label: '大規模' },
-                      ].map((preset) => (
-                        <button
-                          key={preset.label}
-                          type="button"
-                          onClick={() => setFormData({ 
-                            ...formData, 
-                            total_budget: preset.budget, 
-                            max_responses: preset.responses 
-                          })}
-                          className="p-3 text-center border border-gray-300 rounded-md hover:border-blue-500 hover:bg-blue-50 transition-colors duration-200"
-                        >
-                          <div className="text-sm font-medium text-gray-900">{preset.label}</div>
-                          <div className="text-xs text-gray-500">{preset.budget}pt / {preset.responses}人</div>
-                        </button>
-                      ))}
+                        { budget: 1000, responses: 10, label: 'お試し', desc: '小規模調査', color: 'border-green-300 bg-green-50 hover:bg-green-100' },
+                        { budget: 3000, responses: 30, label: '標準', desc: '一般的な調査', color: 'border-blue-300 bg-blue-50 hover:bg-blue-100' },
+                        { budget: 5000, responses: 50, label: '中規模', desc: 'しっかり調査', color: 'border-purple-300 bg-purple-50 hover:bg-purple-100' },
+                        { budget: 10000, responses: 100, label: '大規模', desc: '本格的調査', color: 'border-orange-300 bg-orange-50 hover:bg-orange-100' },
+                      ].map((preset) => {
+                        const isSelected = formData.total_budget === preset.budget && formData.max_responses === preset.responses;
+                        return (
+                          <button
+                            key={preset.label}
+                            type="button"
+                            onClick={() => setFormData({ 
+                              ...formData, 
+                              total_budget: preset.budget, 
+                              max_responses: preset.responses 
+                            })}
+                            className={`p-4 text-center border-2 rounded-lg transition-all duration-200 ${
+                              isSelected 
+                                ? 'border-blue-500 bg-blue-100 shadow-md transform scale-105' 
+                                : preset.color
+                            }`}
+                          >
+                            <div className="text-lg font-bold text-gray-900">{preset.label}</div>
+                            <div className="text-xs text-gray-600 mb-2">{preset.desc}</div>
+                            <div className="text-sm font-medium text-gray-800">{preset.budget.toLocaleString()}pt</div>
+                            <div className="text-xs text-gray-600">{preset.responses}人の回答</div>
+                            <div className="text-xs text-gray-500 mt-1">1人あたり {(preset.budget / preset.responses).toFixed(0)}pt</div>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
                   {/* Custom Settings */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-white border border-gray-200 rounded-xl p-6">
+                    <div className="flex items-center mb-4">
+                      <svg className="w-5 h-5 text-gray-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
+                      </svg>
+                      <h4 className="text-sm font-semibold text-gray-900">カスタム設定</h4>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        消費ポイント数 *
+                        消費ポイント数 <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
                         <input
@@ -377,19 +399,20 @@ export default function CreateSurveyPage() {
                           min="1000"
                           step="100"
                           value={formData.total_budget}
-                          onChange={(e) => setFormData({ ...formData, total_budget: parseInt(e.target.value) || 1000 })}
+                          onChange={(e) => {
+                            const value = parseInt(e.target.value) || 1000;
+                            const roundedValue = Math.floor(value / 100) * 100;
+                            setFormData({ ...formData, total_budget: Math.max(1000, roundedValue) });
+                          }}
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                           placeholder="1000"
                         />
                       </div>
-                      <p className="text-xs text-gray-500 mt-1">
-                        1000ポイント以上、100ポイント単位で設定
-                      </p>
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        集めたい人数 *
+                        集めたい人数 <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
                         <input
@@ -407,15 +430,18 @@ export default function CreateSurveyPage() {
                           min="10"
                           step="10"
                           value={formData.max_responses}
-                          onChange={(e) => setFormData({ ...formData, max_responses: parseInt(e.target.value) || 10 })}
+                          onChange={(e) => {
+                            const value = parseInt(e.target.value) || 10;
+                            const roundedValue = Math.floor(value / 10) * 10;
+                            setFormData({ ...formData, max_responses: Math.max(10, roundedValue) });
+                          }}
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                           placeholder="10"
                         />
                       </div>
-                      <p className="text-xs text-gray-500 mt-1">
-                        10人以上、10人単位で設定
-                      </p>
                     </div>
+                    </div>
+                    
                   </div>
 
                   {/* Points Calculation Display */}
