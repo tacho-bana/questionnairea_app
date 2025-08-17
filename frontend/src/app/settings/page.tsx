@@ -304,16 +304,6 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Privacy Notice */}
-        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6">
-          <h3 className="text-lg font-semibold text-blue-900 mb-3">プライバシーについて</h3>
-          <ul className="text-sm text-blue-800 space-y-2">
-            <li>• 個人情報は暗号化され、安全に管理されています</li>
-            <li>• 性別・生年月日は統計目的でのみ使用され、個人を特定することはありません</li>
-            <li>• アンケート回答時、回答者の個人情報は匿名化されて表示されます</li>
-            <li>• データは第三者に提供されることはありません</li>
-          </ul>
-        </div>
       </div>
     </ProtectedRoute>
   )
