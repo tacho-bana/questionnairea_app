@@ -310,7 +310,7 @@ export default function SurveysPage() {
                         setSearchTerm('')
                         setSelectedCategory(null)
                       }}
-                      className="bg-blue-600 text-white px-4 py-2 rounded-md font-medium hover:bg-blue-700 transition-colors duration-200"
+                      className="bg-blue-400 text-white px-4 py-2 rounded-md font-medium hover:bg-blue-700 transition-colors duration-200"
                     >
                       すべて表示
                     </button>
