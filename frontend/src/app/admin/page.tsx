@@ -69,7 +69,7 @@ export default function AdminPage() {
     <ProtectedRoute>
       <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">管理者ダッシュボード</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">管理者マイページ</h1>
           <p className="text-gray-600">システムユーザーの管理</p>
         </div>
 

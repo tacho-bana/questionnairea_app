@@ -14,7 +14,7 @@
 ## 機能一覧
 
 - ✅ Google認証によるログイン/新規登録
-- ✅ ダッシュボード（ポイント・統計表示）
+- ✅ マイページ（ポイント・統計表示）
 - ✅ アンケート一覧（カテゴリ絞り込み・検索）
 - 🚧 アンケート回答機能
 - 🚧 アンケート作成機能
@@ -47,7 +47,7 @@ ls -la
 
 ### 3. データベーススキーマの作成
 
-1. Supabase ダッシュボードで **SQL Editor** に移動
+1. Supabase マイページで **SQL Editor** に移動
 2. `supabase_schema.sql` ファイルの内容をコピー&ペースト
 3. **RUN** ボタンをクリックしてスキーマを作成
 
@@ -107,7 +107,7 @@ ls -la
 
 #### 6.2 Supabase での Google OAuth 設定
 
-1. Supabase ダッシュボードで **Authentication** > **Providers** に移動
+1. Supabase マイページで **Authentication** > **Providers** に移動
 2. **Google** プロバイダーを有効にする
 3. Google Cloud Console で取得した情報を入力:
    - **Client ID**: 取得したクライアントID
@@ -118,7 +118,7 @@ ls -la
 
 #### 7.1 Supabase の認証情報を取得
 
-1. Supabase ダッシュボードで **Settings** > **API** に移動
+1. Supabase マイページで **Settings** > **API** に移動
 2. 以下の情報をメモ:
    - **Project URL**
    - **anon public** key
@@ -212,7 +212,7 @@ docker-compose up -d --build
 1. **Googleアカウントでログイン** ボタンをクリック
 2. Google認証画面でログイン
 3. `/dashboard` にリダイレクトされることを確認
-4. ダッシュボードに以下が表示されることを確認:
+4. マイページに以下が表示されることを確認:
    - ユーザー名
    - 保有ポイント (初期値: 0)
    - 信頼度スコア (初期値: 100)
@@ -220,7 +220,7 @@ docker-compose up -d --build
 ### 3. ナビゲーション確認
 
 1. ナビゲーションバーに以下のメニューが表示されることを確認:
-   - ダッシュボード
+   - マイページ
    - アンケート一覧
    - アンケート作成
    - データマーケット

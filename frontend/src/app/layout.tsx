@@ -6,8 +6,11 @@ import ClientLayout from '@/components/ClientLayout'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Questionnaire Platform',
-  description: 'Student questionnaire and points exchange platform',
+  title: 'Gakurisa - 学生向けアンケートプラットフォーム',
+  description: 'アンケート作成・回答・データ交換がすべてポイントでできるプラットフォーム',
+  icons: {
+    icon: '/icon.png',
+  }
 }
 
 export default function RootLayout({

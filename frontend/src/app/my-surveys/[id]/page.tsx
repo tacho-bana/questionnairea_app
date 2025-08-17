@@ -423,7 +423,7 @@ export default function MySurveyDetailPage() {
           <div className="text-center">
             <h1 className="text-2xl font-bold text-gray-900 mb-4">アンケートが見つかりません</h1>
             <Link href="/dashboard" className="text-blue-600 hover:text-blue-500">
-              ダッシュボードに戻る
+              マイページに戻る
             </Link>
           </div>
         </div>

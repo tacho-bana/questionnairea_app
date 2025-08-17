@@ -97,7 +97,7 @@ export default function Dashboard() {
             {/* Header */}
             <div className="mb-8">
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                ダッシュボード
+                マイページ
               </h1>
               <p className="text-gray-600">
                 こんにちは、{userProfile?.username || user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0]}さん

@@ -10,7 +10,7 @@ GET .../rest/v1/users?select=*&id=eq.xxx 406 (Not Acceptable)
 
 ## 解決手順
 
-### 1. Supabase ダッシュボードでRLSポリシーを設定
+### 1. Supabase マイページでRLSポリシーを設定
 
 1. [Supabase Dashboard](https://app.supabase.com/) にログイン
 2. プロジェクトを選択
@@ -63,7 +63,7 @@ ALTER TABLE surveys DISABLE ROW LEVEL SECURITY;
 
 1. RLSポリシーを設定
 2. フロントエンドでGoogle認証
-3. ダッシュボードにアクセス
+3. マイページにアクセス
 4. ユーザー情報が正常に表示されることを確認
 
 ## セキュリティ上の利点
