@@ -17,6 +17,7 @@ type DataListing = {
   seller_id: string
   title: string
   description: string | null
+  price_type: 'free' | 'paid'
   price: number
   revenue_per_sale: number
   total_sales: number
@@ -37,7 +38,8 @@ export default function DataMarketPage() {
   const [selectedSurvey, setSelectedSurvey] = useState<Survey | null>(null)
   const [listingForm, setListingForm] = useState({
     title: '',
-    description: ''
+    description: '',
+    price_type: 'paid' as 'free' | 'paid'
   })
   const [submitting, setSubmitting] = useState(false)
 
@@ -127,6 +129,12 @@ export default function DataMarketPage() {
 
   const handlePurchase = async (listing: DataListing) => {
     if (!user) return
+
+    // 無料の場合は購入処理不要
+    if (listing.price_type === 'free') {
+      alert('このデータセットは無料です！プレビューで全データを確認できます。')
+      return
+    }
 
     setPurchaseLoading(listing.id)
 
@@ -254,8 +262,9 @@ export default function DataMarketPage() {
             seller_id: user.id,
             title: listingForm.title || selectedSurvey.title,
             description: listingForm.description || selectedSurvey.description,
-            price: 1000, // 固定価格
-            revenue_per_sale: 100 // 作成者収益
+            price_type: listingForm.price_type,
+            price: listingForm.price_type === 'paid' ? 1000 : 0,
+            revenue_per_sale: listingForm.price_type === 'paid' ? 100 : 0
           }
         ])
 
@@ -263,7 +272,7 @@ export default function DataMarketPage() {
 
       alert('データを出品しました！')
       setShowListingModal(false)
-      setListingForm({ title: '', description: '' })
+      setListingForm({ title: '', description: '', price_type: 'paid' })
       setSelectedSurvey(null)
       fetchMySurveys()
     } catch (error: any) {
@@ -425,11 +434,17 @@ export default function DataMarketPage() {
                             </div>
                             
                             <div className="text-right ml-6">
-                              <div className="text-2xl font-bold text-green-600 mb-1">
-                                {listing.price.toLocaleString()}pt
-                              </div>
+                              {listing.price_type === 'free' ? (
+                                <div className="text-2xl font-bold text-green-600 mb-1">
+                                  FREE
+                                </div>
+                              ) : (
+                                <div className="text-2xl font-bold text-green-600 mb-1">
+                                  {listing.price.toLocaleString()}pt
+                                </div>
+                              )}
                               <div className="text-sm text-gray-500">
-                                作成者収益: {listing.revenue_per_sale}pt
+                                {listing.price_type === 'free' ? '無料データセット' : `作成者収益: ${listing.revenue_per_sale}pt`}
                               </div>
                             </div>
                           </div>
@@ -449,7 +464,11 @@ export default function DataMarketPage() {
                             <button
                               onClick={() => handlePurchase(listing)}
                               disabled={purchaseLoading === listing.id || listing.seller_id === user?.id}
-                              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white py-3 px-6 rounded-lg font-medium transition-colors flex items-center"
+                              className={`py-3 px-6 rounded-lg font-medium transition-colors flex items-center ${
+                                listing.price_type === 'free' 
+                                  ? 'bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white'
+                                  : 'bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white'
+                              }`}
                             >
                               {purchaseLoading === listing.id ? (
                                 <>
@@ -461,6 +480,13 @@ export default function DataMarketPage() {
                                 </>
                               ) : listing.seller_id === user?.id ? (
                                 '自分の出品'
+                              ) : listing.price_type === 'free' ? (
+                                <>
+                                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                  無料で取得
+                                </>
                               ) : (
                                 <>
                                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -529,13 +555,14 @@ export default function DataMarketPage() {
                               setSelectedSurvey(survey)
                               setListingForm({
                                 title: survey.title,
-                                description: survey.description || ''
+                                description: survey.description || '',
+                                price_type: 'paid'
                               })
                               setShowListingModal(true)
                             }}
                             className="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors"
                           >
-                            1000ptで出品する
+                            データを出品する
                           </button>
                         </div>
                       </div>
@@ -577,20 +604,67 @@ export default function DataMarketPage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    販売タイプ <span className="text-red-500">*</span>
+                  </label>
+                  <div className="space-y-2">
+                    <label className="flex items-center p-3 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="price_type"
+                        value="free"
+                        checked={listingForm.price_type === 'free'}
+                        onChange={(e) => setListingForm({ ...listingForm, price_type: e.target.value as 'free' | 'paid' })}
+                        className="mr-3"
+                      />
+                      <div>
+                        <div className="font-medium text-gray-900">無料 (FREE)</div>
+                        <div className="text-sm text-gray-600">誰でも自由にダウンロード可能</div>
+                      </div>
+                    </label>
+                    
+                    <label className="flex items-center p-3 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="price_type"
+                        value="paid"
+                        checked={listingForm.price_type === 'paid'}
+                        onChange={(e) => setListingForm({ ...listingForm, price_type: e.target.value as 'free' | 'paid' })}
+                        className="mr-3"
+                      />
+                      <div>
+                        <div className="font-medium text-gray-900">有料 (1000pt)</div>
+                        <div className="text-sm text-gray-600">購入者から1000pt、あなたに100pt収益</div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
                 
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <div className="text-sm space-y-1">
                     <div className="flex justify-between">
                       <span>販売価格:</span>
-                      <span className="font-semibold">1000pt</span>
+                      <span className="font-semibold">
+                        {listingForm.price_type === 'free' ? '無料 (FREE)' : '1000pt'}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span>あなたの収益:</span>
-                      <span className="font-semibold text-green-600">100pt/販売</span>
+                      <span className={`font-semibold ${listingForm.price_type === 'free' ? 'text-gray-500' : 'text-green-600'}`}>
+                        {listingForm.price_type === 'free' ? 'なし' : '100pt/販売'}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span>対象データ件数:</span>
                       <span className="font-semibold">{selectedSurvey.current_responses}件</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>データアクセス:</span>
+                      <span className="font-semibold text-blue-600">
+                        {listingForm.price_type === 'free' ? '全データプレビュー可' : '3件プレビューのみ'}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -601,7 +675,7 @@ export default function DataMarketPage() {
                   onClick={() => {
                     setShowListingModal(false)
                     setSelectedSurvey(null)
-                    setListingForm({ title: '', description: '' })
+                    setListingForm({ title: '', description: '', price_type: 'paid' })
                   }}
                   className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
                 >

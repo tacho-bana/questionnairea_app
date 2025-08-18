@@ -18,6 +18,7 @@ type DataListing = {
   seller_id: string
   title: string
   description: string | null
+  price_type: 'free' | 'paid'
   price: number
   revenue_per_sale: number
   total_sales: number
@@ -59,7 +60,6 @@ export default function DatasetDetailPage() {
   useEffect(() => {
     if (id) {
       fetchListingData()
-      checkPurchaseStatus()
     }
   }, [id, user])
 
@@ -67,6 +67,7 @@ export default function DatasetDetailPage() {
   useEffect(() => {
     if (listing) {
       fetchPreviewData()
+      checkPurchaseStatus()
     }
   }, [listing])
 
@@ -100,7 +101,13 @@ export default function DatasetDetailPage() {
   }
 
   const checkPurchaseStatus = async () => {
-    if (!user) return
+    if (!user || !listing) return
+
+    // 無料データセットの場合は購入チェック不要
+    if (listing.price_type === 'free') {
+      setIsPurchased(false)
+      return
+    }
 
     try {
       const { data } = await supabase
@@ -141,11 +148,13 @@ export default function DatasetDetailPage() {
         return
       }
 
+      // 無料データセットの場合は全データ、有料の場合は3件のみ
+      const limit = listing?.price_type === 'free' ? 1000 : 3
       const { data: responses, error } = await supabase
         .from('survey_responses')
         .select('id, submitted_at, responses')
         .eq('survey_id', surveyId)
-        .limit(3)
+        .limit(limit)
 
       if (error) {
         console.error('Error fetching survey responses:', error)
@@ -228,10 +237,14 @@ export default function DatasetDetailPage() {
         return row
       }) || []
 
+      const previewNote = listing?.price_type === 'free' 
+        ? '※このデータセットは無料です。すべてのデータをプレビューで確認できます。'
+        : '※これは最初の3件のプレビューです。購入後、すべての回答データをダウンロードできます。'
+
       const preview: PreviewData = {
         survey_title: listing?.title || 'データセット',
         total_responses: listing?.survey?.current_responses || responses?.length || 0,
-        preview_note: '※これは最初の3件のプレビューです。実際のデータセットにはすべての回答が含まれます。',
+        preview_note: previewNote,
         sample_responses: responses?.map((resp, index) => ({
           response_id: index + 1,
           submitted_at: new Date(resp.submitted_at).toLocaleDateString('ja-JP'),
@@ -262,6 +275,12 @@ export default function DatasetDetailPage() {
 
   const handlePurchase = async () => {
     if (!user || !listing) return
+
+    // 無料の場合は購入処理不要
+    if (listing.price_type === 'free') {
+      alert('このデータセットは無料です！プレビューで全データを確認できます。')
+      return
+    }
 
     setPurchaseLoading(true)
 
@@ -392,7 +411,10 @@ export default function DatasetDetailPage() {
   }
 
   const downloadFullData = async () => {
-    if (!listing || !isPurchased) return
+    if (!listing) return
+    
+    // 無料データセットまたは購入済みデータのみダウンロード可能
+    if (listing.price_type !== 'free' && !isPurchased) return
 
     try {
       const { data: responses, error } = await supabase
@@ -544,15 +566,39 @@ export default function DatasetDetailPage() {
             </div>
             
             <div className="ml-8 text-right">
-              <div className="text-3xl font-bold text-green-600 mb-2">
-                {listing.price.toLocaleString()}pt
-              </div>
+              {listing.price_type === 'free' ? (
+                <div className="text-3xl font-bold text-green-600 mb-2">
+                  FREE
+                </div>
+              ) : (
+                <div className="text-3xl font-bold text-green-600 mb-2">
+                  {listing.price.toLocaleString()}pt
+                </div>
+              )}
               <div className="text-sm text-gray-500 mb-4">
-                作成者収益: {listing.revenue_per_sale}pt
+                {listing.price_type === 'free' ? '無料データセット' : `作成者収益: ${listing.revenue_per_sale}pt`}
               </div>
               
               <div className="space-y-2">
-                {isPurchased ? (
+                {listing.price_type === 'free' ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-center py-2 px-4 bg-green-100 text-green-800 rounded-lg font-medium">
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      無料データセット
+                    </div>
+                    <button
+                      onClick={downloadFullData}
+                      className="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-6 rounded-lg font-medium flex items-center justify-center"
+                    >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      CSVファイルをダウンロード
+                    </button>
+                  </div>
+                ) : isPurchased ? (
                   <div className="space-y-2">
                     <div className="flex items-center justify-center py-2 px-4 bg-green-100 text-green-800 rounded-lg font-medium">
                       <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -7,8 +7,9 @@ CREATE TABLE IF NOT EXISTS data_market_listings (
   seller_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   title VARCHAR(255) NOT NULL,
   description TEXT,
-  price INTEGER DEFAULT 1000, -- 固定1000pt
-  revenue_per_sale INTEGER DEFAULT 100, -- 作成者に入る金額
+  price_type VARCHAR(20) DEFAULT 'paid' CHECK (price_type IN ('free', 'paid')), -- 価格タイプ
+  price INTEGER DEFAULT 1000, -- 有料の場合の価格
+  revenue_per_sale INTEGER DEFAULT 100, -- 作成者に入る金額（有料のみ）
   total_sales INTEGER DEFAULT 0,
   total_revenue INTEGER DEFAULT 0,
   is_active BOOLEAN DEFAULT true,
