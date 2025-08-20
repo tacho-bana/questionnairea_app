@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase-client'
@@ -409,17 +410,6 @@ export default function DataMarketPage() {
                     <h3 className="text-lg font-medium text-gray-900 mb-2">
                       販売中のデータセットがありません
                     </h3>
-                    <p className="text-gray-500">
-                      データマーケット機能を使用するには、データベースのセットアップが必要です。
-                    </p>
-                    <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                      <p className="text-sm text-blue-800">
-                        <strong>セットアップ手順:</strong><br/>
-                        1. Supabaseダッシュボードの「SQL Editor」にアクセス<br/>
-                        2. data_market_schema.sql の内容を実行<br/>
-                        3. ページを再読み込み
-                      </p>
-                    </div>
                   </div>
                 ) : (
                   <div className="space-y-6">
@@ -481,16 +471,17 @@ export default function DataMarketPage() {
                           </div>
                           
                           <div className="flex gap-3">
-                            <button
-                              onClick={() => window.location.href = `/data-market/${listing.id}`}
-                              className="flex-1 bg-blue-300 hover:bg-blue-400 text-blue-700 py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center"
+                            <Link
+                              href={`/data-market/${listing.id}`}
+                              prefetch={true}
+                              className="flex-1 bg-blue-400 hover:bg-blue-500 text-blue-700 py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center"
                             >
                               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                               </svg>
                               詳細とプレビューを見る
-                            </button>
+                            </Link>
                           </div>
                         </div>
                       </div>

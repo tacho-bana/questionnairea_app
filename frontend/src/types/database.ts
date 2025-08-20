@@ -7,7 +7,6 @@ export interface Database {
           email: string
           username: string | null
           points: number
-          reputation_score: number
           is_banned: boolean
           gender: string | null
           birth_date: string | null
@@ -20,7 +19,6 @@ export interface Database {
           email: string
           username?: string | null
           points?: number
-          reputation_score?: number
           is_banned?: boolean
           gender?: string | null
           birth_date?: string | null
@@ -33,13 +31,102 @@ export interface Database {
           email?: string
           username?: string | null
           points?: number
-          reputation_score?: number
           is_banned?: boolean
           gender?: string | null
           birth_date?: string | null
           profile_completed?: boolean
           created_at?: string
           updated_at?: string
+        }
+      }
+      notifications: {
+        Row: {
+          id: string
+          title: string
+          content: string
+          type: 'info' | 'success' | 'warning' | 'error'
+          is_global: boolean
+          target_user_id: string | null
+          is_active: boolean
+          reward_points: number
+          max_claims: number | null
+          current_claims: number
+          claim_deadline: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          title: string
+          content: string
+          type?: 'info' | 'success' | 'warning' | 'error'
+          is_global?: boolean
+          target_user_id?: string | null
+          is_active?: boolean
+          reward_points?: number
+          max_claims?: number | null
+          current_claims?: number
+          claim_deadline?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          title?: string
+          content?: string
+          type?: 'info' | 'success' | 'warning' | 'error'
+          is_global?: boolean
+          target_user_id?: string | null
+          is_active?: boolean
+          reward_points?: number
+          max_claims?: number | null
+          current_claims?: number
+          claim_deadline?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      user_notification_reads: {
+        Row: {
+          id: string
+          user_id: string
+          notification_id: string
+          read_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          notification_id: string
+          read_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          notification_id?: string
+          read_at?: string
+        }
+      }
+      notification_point_claims: {
+        Row: {
+          id: string
+          notification_id: string
+          user_id: string
+          points_claimed: number
+          claimed_at: string
+        }
+        Insert: {
+          id?: string
+          notification_id: string
+          user_id: string
+          points_claimed: number
+          claimed_at?: string
+        }
+        Update: {
+          id?: string
+          notification_id?: string
+          user_id?: string
+          points_claimed?: number
+          claimed_at?: string
         }
       }
       categories: {

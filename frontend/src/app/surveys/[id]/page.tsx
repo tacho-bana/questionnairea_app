@@ -454,7 +454,7 @@ export default function SurveyDetailPage() {
               </p>
             <button
               onClick={() => router.push('/surveys')}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md"
+              className="bg-blue-400 hover:bg-blue-500 text-white px-4 py-2 rounded-md"
             >
               他のアンケートを見る
             </button>

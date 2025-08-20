@@ -20,7 +20,8 @@ export default function Sidebar() {
 
   useEffect(() => {
     if (user) {
-      fetchUserProfile()
+      // 初回はキャッシュを積極的に使用
+      fetchUserProfile(false)
       
       // Supabaseリアルタイム購読を設定
       const subscription = supabase
@@ -112,29 +113,16 @@ export default function Sidebar() {
 
   // ナビゲーション状態の監視とポイント更新
   useEffect(() => {
-    const handleRouteChangeStart = () => {
-      setIsNavigating(true)
-    }
-
-    const handleRouteChangeComplete = () => {
-      setIsNavigating(false)
-      setIsMobileMenuOpen(false) // モバイルメニューを閉じる
-      
-      // ページ遷移完了時にポイントを更新（キャッシュを無視）
-      if (user) {
-        console.log('Route changed, refreshing user profile for updated points')
-        fetchUserProfile(true)
-      }
-    }
-
     // Next.js App Routerでのページ遷移は直接監視できないため、pathname変更を監視
     setIsNavigating(false)
+    setIsMobileMenuOpen(false) // モバイルメニューを閉じる
     
-    // ページ遷移時にポイント更新
+    // ページ遷移時にポイント更新（バックグラウンド処理）
     if (user) {
+      // プロフィールが既にある場合は、非同期でバックグラウンド更新
       setTimeout(() => {
         fetchUserProfile(true)
-      }, 100)
+      }, 200)
     }
   }, [pathname, user])
 
@@ -149,7 +137,7 @@ export default function Sidebar() {
         return
       }
       
-      if (!forceRefresh) {
+      if (!forceRefresh && !userProfile) {
         // キャッシュから読み込みを試行（期間を30秒に短縮）
         const cachedProfile = localStorage.getItem(cacheKey)
         
@@ -158,6 +146,8 @@ export default function Sidebar() {
           // キャッシュが30秒以内であれば使用
           if (Date.now() - parsed.timestamp < 30 * 1000) {
             setUserProfile(parsed.data)
+            // キャッシュを使用した場合でも、バックグラウンドで更新
+            setTimeout(() => fetchUserProfile(true), 100)
             return
           }
         }
@@ -354,9 +344,15 @@ export default function Sidebar() {
     </>
   )
 
-  // ユーザープロフィールが読み込み中の場合はスケルトンを表示
-  if (!userProfile) {
-    return <SkeletonSidebar />
+  // ユーザープロフィールが読み込み中かつキャッシュもない場合のみスケルトンを表示
+  if (!userProfile && user) {
+    const cacheKey = `userProfile_${user.id}`
+    const cachedProfile = localStorage.getItem(cacheKey)
+    
+    // キャッシュがない場合のみスケルトンを表示
+    if (!cachedProfile) {
+      return <SkeletonSidebar />
+    }
   }
 
   return (
