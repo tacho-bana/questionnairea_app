@@ -34,6 +34,7 @@ export default function DataMarketPage() {
   const [loading, setLoading] = useState(true)
   const [purchaseLoading, setPurchaseLoading] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'market' | 'sell'>('market')
+  const [showMyListings, setShowMyListings] = useState(false)
   const [showListingModal, setShowListingModal] = useState(false)
   const [selectedSurvey, setSelectedSurvey] = useState<Survey | null>(null)
   const [listingForm, setListingForm] = useState({
@@ -51,10 +52,17 @@ export default function DataMarketPage() {
     }
   }, [activeTab, user])
 
+  // フィルター状態変更時にデータを再取得
+  useEffect(() => {
+    if (activeTab === 'market') {
+      fetchMarketData()
+    }
+  }, [showMyListings])
+
   const fetchMarketData = async () => {
     setLoading(true)
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('data_market_listings')
         .select(`
           *,
@@ -65,7 +73,13 @@ export default function DataMarketPage() {
           )
         `)
         .eq('is_active', true)
-        .order('created_at', { ascending: false })
+
+      // 自分の出品のみ表示する場合
+      if (showMyListings && user) {
+        query = query.eq('seller_id', user.id)
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false })
 
       if (error && error.message.includes('Could not find the table')) {
         console.log('データマーケットのテーブルがまだ作成されていません')
@@ -339,28 +353,45 @@ export default function DataMarketPage() {
         {/* タブ切り替え */}
         <div className="mb-8">
           <div className="border-b border-gray-200">
-            <nav className="flex space-x-8">
-              <button
-                onClick={() => setActiveTab('market')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'market'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                データを購入
-              </button>
-              <button
-                onClick={() => setActiveTab('sell')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'sell'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                データを販売
-              </button>
-            </nav>
+            <div className="flex items-center justify-between">
+              <nav className="flex space-x-8">
+                <button
+                  onClick={() => setActiveTab('market')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'market'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  データを購入
+                </button>
+                <button
+                  onClick={() => setActiveTab('sell')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'sell'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  データを販売
+                </button>
+              </nav>
+              
+              {/* フィルター */}
+              {activeTab === 'market' && (
+                <div className="flex items-center space-x-4 pb-2">
+                  <label className="flex items-center text-sm text-gray-600">
+                    <input
+                      type="checkbox"
+                      checked={showMyListings}
+                      onChange={(e) => setShowMyListings(e.target.checked)}
+                      className="mr-2 rounded"
+                    />
+                    自分の出品のみ表示
+                  </label>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -444,7 +475,7 @@ export default function DataMarketPage() {
                                 </div>
                               )}
                               <div className="text-sm text-gray-500">
-                                {listing.price_type === 'free' ? '無料データセット' : `作成者収益: ${listing.revenue_per_sale}pt`}
+                                {listing.price_type === 'free' ? '無料データセット' : ""}
                               </div>
                             </div>
                           </div>
@@ -452,49 +483,13 @@ export default function DataMarketPage() {
                           <div className="flex gap-3">
                             <button
                               onClick={() => window.location.href = `/data-market/${listing.id}`}
-                              className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center"
+                              className="flex-1 bg-blue-300 hover:bg-blue-400 text-blue-700 py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center"
                             >
                               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                               </svg>
                               詳細とプレビューを見る
-                            </button>
-                            
-                            <button
-                              onClick={() => handlePurchase(listing)}
-                              disabled={purchaseLoading === listing.id || listing.seller_id === user?.id}
-                              className={`py-3 px-6 rounded-lg font-medium transition-colors flex items-center ${
-                                listing.price_type === 'free' 
-                                  ? 'bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white'
-                                  : 'bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white'
-                              }`}
-                            >
-                              {purchaseLoading === listing.id ? (
-                                <>
-                                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25"/>
-                                    <path fill="currentColor" className="opacity-75" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
-                                  </svg>
-                                  購入中...
-                                </>
-                              ) : listing.seller_id === user?.id ? (
-                                '自分の出品'
-                              ) : listing.price_type === 'free' ? (
-                                <>
-                                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                  </svg>
-                                  無料で取得
-                                </>
-                              ) : (
-                                <>
-                                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5M17 13v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6" />
-                                  </svg>
-                                  購入する
-                                </>
-                              )}
                             </button>
                           </div>
                         </div>

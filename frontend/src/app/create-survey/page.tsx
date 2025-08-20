@@ -17,6 +17,7 @@ export default function CreateSurveyPage() {
   const [loading, setLoading] = useState(false)
   const [categories, setCategories] = useState<Category[]>([])
   const [userProfile, setUserProfile] = useState<any>(null)
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
   
   const [formData, setFormData] = useState({
     title: '',
@@ -86,7 +87,41 @@ export default function CreateSurveyPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // 基本的なバリデーションを先に実行
+    if (!formData.title.trim()) {
+      alert('タイトルを入力してください')
+      return
+    }
+
+    if (!formData.category_id) {
+      alert('カテゴリを選択してください')
+      return
+    }
+
+    if (!formData.deadline) {
+      alert('締切日を設定してください')
+      return
+    }
+
+    const deadlineDate = new Date(formData.deadline)
+    if (deadlineDate <= new Date()) {
+      alert('締切日は現在時刻より後に設定してください')
+      return
+    }
+
+    if (questions.some(q => !q.question_text.trim())) {
+      alert('すべての質問を入力してください')
+      return
+    }
+
+    // 確認モーダルを表示
+    setShowConfirmModal(true)
+  }
+
+  const handleConfirmCreate = async () => {
     setLoading(true)
+    setShowConfirmModal(false)
 
     try {
       // ポイント残高チェック
@@ -108,17 +143,6 @@ export default function CreateSurveyPage() {
 
       if (rewardPerResponse <= 0) {
         alert('1人あたりの報酬が0以下になります。消費ポイント数を増やすか、人数を減らしてください')
-        return
-      }
-
-      if (!formData.deadline) {
-        alert('締切日を設定してください')
-        return
-      }
-
-      const deadlineDate = new Date(formData.deadline)
-      if (deadlineDate <= new Date()) {
-        alert('締切日は現在時刻より後に設定してください')
         return
       }
 
@@ -520,6 +544,106 @@ export default function CreateSurveyPage() {
             </form>
             </div>
           )}
+
+        {/* 確認モーダル */}
+        {showConfirmModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6">
+              <div className="flex items-center mb-4">
+                <div className="flex-shrink-0">
+                  <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-lg font-semibold text-gray-900">アンケートを作成しますか？</h3>
+                </div>
+              </div>
+              
+              <div className="mb-6">
+                <p className="text-gray-700 mb-4">
+                  以下の内容でアンケートを作成します。作成後は内容の変更ができません。
+                </p>
+                
+                <div className="bg-gray-50 border rounded-lg p-4 space-y-3">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="font-medium text-gray-700">タイトル:</span>
+                      <p className="text-gray-900">{formData.title}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-700">カテゴリ:</span>
+                      <p className="text-gray-900">
+                        {categories.find(c => c.id === parseInt(formData.category_id))?.name}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-700">消費ポイント:</span>
+                      <p className="text-gray-900 font-semibold">{formData.total_budget.toLocaleString()}pt</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-700">目標回答数:</span>
+                      <p className="text-gray-900">{formData.max_responses}人</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-700">1人あたり報酬:</span>
+                      <p className="text-gray-900 font-semibold text-green-600">{rewardPerResponse}pt</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-700">質問数:</span>
+                      <p className="text-gray-900">{questions.length}個</p>
+                    </div>
+                  </div>
+                  
+                  <div className="border-t pt-3">
+                    <span className="font-medium text-gray-700">締切日:</span>
+                    <p className="text-gray-900">
+                      {new Date(formData.deadline).toLocaleString('ja-JP', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                  <div className="flex">
+                    <svg className="w-5 h-5 text-yellow-600 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                    <div className="text-sm text-yellow-800">
+                      <p className="font-medium mb-1">ご注意</p>
+                      <ul className="list-disc list-inside space-y-1">
+                        <li>作成後はアンケート内容の変更はできません</li>
+                        <li>{formData.total_budget.toLocaleString()}ポイントが消費されます</li>
+                        <li>目標回答数に達しない場合、余ったポイントは返金されます</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowConfirmModal(false)}
+                  className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  キャンセル
+                </button>
+                <button
+                  onClick={handleConfirmCreate}
+                  disabled={loading}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                >
+                  {loading ? '作成中...' : 'アンケートを作成'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </ProtectedRoute>
   )

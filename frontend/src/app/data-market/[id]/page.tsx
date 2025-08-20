@@ -56,6 +56,10 @@ export default function DatasetDetailPage() {
   const [purchaseLoading, setPurchaseLoading] = useState(false)
   const [isPurchased, setIsPurchased] = useState(false)
   const [activeTab, setActiveTab] = useState<'overview' | 'preview'>('overview')
+  const [editMode, setEditMode] = useState(false)
+  const [editDescription, setEditDescription] = useState('')
+  const [showCancelModal, setShowCancelModal] = useState(false)
+  const [cancelLoading, setCancelLoading] = useState(false)
 
   useEffect(() => {
     if (id) {
@@ -483,6 +487,71 @@ export default function DatasetDetailPage() {
     }
   }
 
+  const handleUpdateDescription = async () => {
+    if (!listing || !user || listing.seller_id !== user.id) return
+
+    try {
+      const { error } = await supabase
+        .from('data_market_listings')
+        .update({ description: editDescription })
+        .eq('id', listing.id)
+
+      if (error) throw error
+
+      // ローカル状態を更新
+      setListing({ ...listing, description: editDescription })
+      setEditMode(false)
+      alert('説明を更新しました')
+    } catch (error: any) {
+      console.error('Error updating description:', error)
+      alert('更新に失敗しました: ' + error.message)
+    }
+  }
+
+  const startEdit = () => {
+    setEditDescription(listing?.description || '')
+    setEditMode(true)
+  }
+
+  const cancelEdit = () => {
+    setEditDescription('')
+    setEditMode(false)
+  }
+
+  const handleCancelListing = async () => {
+    if (!listing || !user || listing.seller_id !== user.id) return
+
+    // デバッグ用：ユーザーIDを確認
+    console.log('Current user ID:', user.id)
+    console.log('Listing seller ID:', listing.seller_id)
+    console.log('IDs match:', user.id === listing.seller_id)
+
+    setCancelLoading(true)
+    try {
+      // Supabaseの認証状態を確認
+      const { data: { user: currentUser }, error: authError } = await supabase.auth.getUser()
+      console.log('Supabase auth user:', currentUser?.id)
+      console.log('Auth error:', authError)
+
+      // RPC関数を使用して出品を取消し
+      const { error } = await supabase
+        .rpc('cancel_listing', {
+          listing_id: listing.id
+        })
+
+      if (error) throw error
+
+      alert('出品を取消しました')
+      router.push('/data-market')
+    } catch (error: any) {
+      console.error('Error canceling listing:', error)
+      alert('取消しに失敗しました: ' + error.message)
+    } finally {
+      setCancelLoading(false)
+      setShowCancelModal(false)
+    }
+  }
+
   if (loading) {
     return (
       <ProtectedRoute>
@@ -576,16 +645,42 @@ export default function DatasetDetailPage() {
                 </div>
               )}
               <div className="text-sm text-gray-500 mb-4">
-                {listing.price_type === 'free' ? '無料データセット' : `作成者収益: ${listing.revenue_per_sale}pt`}
+                {listing.price_type === 'free' ? '無料データセット' : ""}
               </div>
               
               <div className="space-y-2">
-                {listing.price_type === 'free' ? (
+                {listing.seller_id === user?.id ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-center py-2 px-4 bg-gray-100 text-gray-600 rounded-lg font-medium">
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      自分の出品
+                    </div>
+                    {listing.price_type === 'free' && (
+                      <button
+                        onClick={downloadFullData}
+                        className="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-6 rounded-lg font-medium flex items-center justify-center"
+                      >
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        CSVファイルをダウンロード
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setShowCancelModal(true)}
+                      className="w-full bg-red-600 hover:bg-red-700 text-white py-3 px-6 rounded-lg font-medium flex items-center justify-center"
+                    >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1H8a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      出品を取消し
+                    </button>
+                  </div>
+                ) : listing.price_type === 'free' ? (
                   <div className="space-y-2">
                     <div className="flex items-center justify-center py-2 px-4 bg-green-100 text-green-800 rounded-lg font-medium">
-                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
                       無料データセット
                     </div>
                     <button
@@ -616,13 +711,6 @@ export default function DatasetDetailPage() {
                       CSVファイルをダウンロード
                     </button>
                   </div>
-                ) : listing.seller_id === user?.id ? (
-                  <button
-                    disabled
-                    className="w-full bg-gray-400 text-white py-3 px-6 rounded-lg font-medium cursor-not-allowed"
-                  >
-                    自分の出品
-                  </button>
                 ) : (
                   <button
                     onClick={handlePurchase}
@@ -665,17 +753,50 @@ export default function DatasetDetailPage() {
             {activeTab === 'overview' && (
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">データセットの説明</h3>
-                  <p className="text-gray-700 leading-relaxed">
-                    {listing.description || 'データセットの説明はありません。'}
-                  </p>
-                </div>
-                
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">アンケート詳細</h3>
-                  <p className="text-gray-700 leading-relaxed">
-                    {listing.survey.description || 'アンケートの説明はありません。'}
-                  </p>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-semibold text-gray-900">データセットの説明</h3>
+                    {user && listing.seller_id === user.id && !editMode && (
+                      <button
+                        onClick={startEdit}
+                        className="text-blue-600 hover:text-blue-700 text-sm flex items-center"
+                      >
+                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        編集
+                      </button>
+                    )}
+                  </div>
+                  
+                  {editMode ? (
+                    <div className="space-y-3">
+                      <textarea
+                        value={editDescription}
+                        onChange={(e) => setEditDescription(e.target.value)}
+                        rows={4}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="データセットの説明を入力してください..."
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleUpdateDescription}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+                        >
+                          保存
+                        </button>
+                        <button
+                          onClick={cancelEdit}
+                          className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 text-sm"
+                        >
+                          キャンセル
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-gray-700 leading-relaxed">
+                      {listing.description || 'データセットの説明はありません。'}
+                    </p>
+                  )}
                 </div>
 
                 {/* 質問とカラムの対応表 */}
@@ -840,6 +961,54 @@ export default function DatasetDetailPage() {
             </div>
           </div>
         </div>
+
+        {/* 取消し確認モーダル */}
+        {showCancelModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+              <div className="flex items-center mb-4">
+                <div className="flex-shrink-0">
+                  <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-lg font-semibold text-gray-900">出品を取消しますか？</h3>
+                </div>
+              </div>
+              
+              <div className="mb-6">
+                <p className="text-gray-700 mb-2">
+                  この操作により「{listing.title}」の出品が取消されます。
+                </p>
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                  <div className="text-sm text-yellow-800 space-y-1">
+                    <p>• 出品が非表示になります</p>
+                    <p>• 購入者は新規にデータを購入できなくなります</p>
+                    <p>• 既に購入済みの方には影響ありません</p>
+                    <p>• この操作は元に戻せません</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowCancelModal(false)}
+                  className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  キャンセル
+                </button>
+                <button
+                  onClick={handleCancelListing}
+                  disabled={cancelLoading}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+                >
+                  {cancelLoading ? '取消し中...' : '出品を取消し'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </ProtectedRoute>
   )

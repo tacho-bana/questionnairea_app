@@ -44,7 +44,7 @@ CREATE POLICY "Users can create listings for their surveys" ON data_market_listi
   FOR INSERT WITH CHECK (seller_id = auth.uid());
 
 CREATE POLICY "Users can update their own listings" ON data_market_listings
-  FOR UPDATE USING (seller_id = auth.uid());
+  FOR UPDATE USING (seller_id = auth.uid()) WITH CHECK (seller_id = auth.uid());
 
 CREATE POLICY "Users can delete their own listings" ON data_market_listings
   FOR DELETE USING (seller_id = auth.uid());
