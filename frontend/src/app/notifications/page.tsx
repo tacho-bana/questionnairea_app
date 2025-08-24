@@ -508,9 +508,9 @@ export default function NotificationsPage() {
                   <div className="p-4 border border-gray-200 rounded-xl mb-6 bg-gradient-to-r from-green-50 to-blue-50">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">🎁 特典ポイント</h3>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">🎁 プレゼント</h3>
                         <p className="text-gray-700 mb-2">
-                          このお知らせをご覧いただいた方に <span className="font-bold text-green-600">{selectedNotification.reward_points}ポイント</span> をプレゼント！
+                          運営より、 <span className="font-bold text-green-600">{selectedNotification.reward_points}ポイント</span> が届きました。
                         </p>
                         
                         {selectedNotification.claim_deadline && (
@@ -546,7 +546,7 @@ export default function NotificationsPage() {
                           <button
                             onClick={claimPoints}
                             disabled={claimLoading}
-                            className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg font-medium flex items-center transition-colors text-sm"
+                            className="bg-green-400 hover:bg-green-500 disabled:opacity-50 text-white px-4 py-2 rounded-lg font-medium flex items-center transition-colors text-sm"
                           >
                             {claimLoading ? (
                               <>
@@ -558,9 +558,6 @@ export default function NotificationsPage() {
                               </>
                             ) : (
                               <>
-                                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                                </svg>
                                 {selectedNotification.reward_points}pt 受け取る
                               </>
                             )}

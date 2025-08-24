@@ -540,7 +540,7 @@ export default function SurveyDetailPage() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-md"
+                  className="px-6 py-2 bg-blue-400 hover:bg-blue-500 disabled:bg-gray-400 text-white rounded-md"
                 >
                   {submitting ? '送信中...' : '回答を送信'}
                 </button>

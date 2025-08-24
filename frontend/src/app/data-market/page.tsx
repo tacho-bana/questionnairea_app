@@ -32,6 +32,7 @@ export default function DataMarketPage() {
   const { user } = useAuth()
   const [listings, setListings] = useState<DataListing[]>([])
   const [mySurveys, setMySurveys] = useState<Survey[]>([])
+  const [categories, setCategories] = useState<Database['public']['Tables']['categories']['Row'][]>([])
   const [loading, setLoading] = useState(true)
   const [purchaseLoading, setPurchaseLoading] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'market' | 'sell'>('market')
@@ -44,8 +45,15 @@ export default function DataMarketPage() {
     price_type: 'paid' as 'free' | 'paid'
   })
   const [submitting, setSubmitting] = useState(false)
+  
+  // 検索・フィルター状態
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState('')
+  const [priceFilter, setPriceFilter] = useState<'all' | 'free' | 'paid'>('all')
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'price_low' | 'price_high'>('newest')
 
   useEffect(() => {
+    fetchCategories()
     if (activeTab === 'market') {
       fetchMarketData()
     } else {
@@ -58,7 +66,35 @@ export default function DataMarketPage() {
     if (activeTab === 'market') {
       fetchMarketData()
     }
-  }, [showMyListings])
+  }, [showMyListings, searchTerm, selectedCategory, priceFilter, sortBy])
+
+  const fetchCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .order('id', { ascending: true })
+
+      if (error) {
+        console.error('Error fetching categories:', error)
+        return
+      }
+
+      if (data) {
+        // 「その他」を最後に移動
+        const otherCategory = data.find(cat => cat.name === 'その他')
+        const otherCategories = data.filter(cat => cat.name !== 'その他')
+        
+        const sortedCategories = otherCategory 
+          ? [...otherCategories, otherCategory]
+          : data
+        
+        setCategories(sortedCategories)
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error)
+    }
+  }
 
   const fetchMarketData = async () => {
     setLoading(true)
@@ -80,7 +116,33 @@ export default function DataMarketPage() {
         query = query.eq('seller_id', user.id)
       }
 
-      const { data, error } = await query.order('created_at', { ascending: false })
+      // 検索フィルター
+      if (searchTerm) {
+        query = query.or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`)
+      }
+
+      // 価格フィルター
+      if (priceFilter !== 'all') {
+        query = query.eq('price_type', priceFilter)
+      }
+
+      // ソート順序
+      switch (sortBy) {
+        case 'oldest':
+          query = query.order('created_at', { ascending: true })
+          break
+        case 'price_low':
+          query = query.order('price', { ascending: true })
+          break
+        case 'price_high':
+          query = query.order('price', { ascending: false })
+          break
+        default: // newest
+          query = query.order('created_at', { ascending: false })
+          break
+      }
+
+      const { data, error } = await query
 
       if (error && error.message.includes('Could not find the table')) {
         console.log('データマーケットのテーブルがまだ作成されていません')
@@ -89,7 +151,16 @@ export default function DataMarketPage() {
       }
 
       if (data) {
-        setListings(data as DataListing[])
+        let filteredData = data as DataListing[]
+        
+        // カテゴリーフィルター（クライアントサイドでフィルタリング）
+        if (selectedCategory) {
+          filteredData = filteredData.filter(listing => 
+            listing.survey?.categories?.id?.toString() === selectedCategory
+          )
+        }
+        
+        setListings(filteredData)
       }
     } catch (error) {
       console.error('Error fetching market data:', error)
@@ -346,9 +417,6 @@ export default function DataMarketPage() {
       <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900">データマーケット</h1>
-          <div className="text-sm text-gray-600">
-            データの売買ができます
-          </div>
         </div>
 
         {/* タブ切り替え */}
@@ -396,6 +464,107 @@ export default function DataMarketPage() {
           </div>
         </div>
 
+        {/* 検索・フィルター */}
+        {activeTab === 'market' && (
+          <div className="mb-6 bg-white p-6 rounded-xl border border-gray-200">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {/* 検索ボックス */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  キーワード検索
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="タイトルや説明で検索..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <svg
+                    className="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
+                  </svg>
+                </div>
+              </div>
+
+              {/* カテゴリーフィルター */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  カテゴリー
+                </label>
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">すべてのカテゴリー</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id.toString()}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 価格フィルター */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  価格
+                </label>
+                <select
+                  value={priceFilter}
+                  onChange={(e) => setPriceFilter(e.target.value as 'all' | 'free' | 'paid')}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="all">すべて</option>
+                  <option value="free">無料</option>
+                  <option value="paid">有料</option>
+                </select>
+              </div>
+
+              {/* ソート */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  並び順
+                </label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as 'newest' | 'oldest' | 'price_low' | 'price_high')}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="newest">新しい順</option>
+                  <option value="oldest">古い順</option>
+                </select>
+              </div>
+            </div>
+
+            {/* クリアボタン */}
+            <div className="mt-4 flex justify-end">
+              <button
+                onClick={() => {
+                  setSearchTerm('')
+                  setSelectedCategory('')
+                  setPriceFilter('all')
+                  setSortBy('newest')
+                }}
+                className="text-sm text-gray-600 hover:text-gray-900"
+              >
+                フィルターをクリア
+              </button>
+            </div>
+          </div>
+        )}
+
         {loading ? (
           <div className="flex justify-center items-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -425,9 +594,6 @@ export default function DataMarketPage() {
                                 <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
                                   {listing.survey.current_responses}回答
                                 </span>
-                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                                  {listing.total_sales}販売済
-                                </span>
                               </div>
                               
                               <h3 className="text-xl font-bold text-gray-900 mb-2">
@@ -439,12 +605,7 @@ export default function DataMarketPage() {
                               </p>
                               
                               <div className="flex items-center text-sm text-gray-500 mb-4">
-                                <div className="flex items-center mr-6">
-                                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                  </svg>
-                                  {listing.survey.users?.username}
-                                </div>
+
                                 <div className="flex items-center">
                                   <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -529,10 +690,6 @@ export default function DataMarketPage() {
                               <span className="font-medium">
                                 {new Date(survey.created_at).toLocaleDateString('ja-JP')}
                               </span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-500">予想収益:</span>
-                              <span className="font-medium text-green-600">100pt/販売</span>
                             </div>
                           </div>
                           

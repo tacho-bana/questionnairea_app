@@ -36,10 +36,23 @@ export default function SurveysPage() {
       const { data, error } = await supabase
         .from('categories')
         .select('*')
-        .order('name')
+        .order('id', { ascending: true })
+
+      if (error) {
+        console.error('Error fetching categories:', error)
+        return
+      }
 
       if (data) {
-        setCategories(data)
+        // 「その他」を最後に移動
+        const otherCategory = data.find(cat => cat.name === 'その他')
+        const otherCategories = data.filter(cat => cat.name !== 'その他')
+        
+        const sortedCategories = otherCategory 
+          ? [...otherCategories, otherCategory]
+          : data
+        
+        setCategories(sortedCategories)
       }
     } catch (error) {
       console.error('Error fetching categories:', error)

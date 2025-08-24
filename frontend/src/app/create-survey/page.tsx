@@ -58,10 +58,23 @@ export default function CreateSurveyPage() {
       const { data, error } = await supabase
         .from('categories')
         .select('*')
-        .order('name')
+        .order('id', { ascending: true })
+
+      if (error) {
+        console.error('Error fetching categories:', error)
+        return
+      }
 
       if (data) {
-        setCategories(data)
+        // 「その他」を最後に移動
+        const otherCategory = data.find(cat => cat.name === 'その他')
+        const otherCategories = data.filter(cat => cat.name !== 'その他')
+        
+        const sortedCategories = otherCategory 
+          ? [...otherCategories, otherCategory]
+          : data
+        
+        setCategories(sortedCategories)
       }
     } catch (error) {
       console.error('Error fetching categories:', error)
@@ -535,7 +548,7 @@ export default function CreateSurveyPage() {
                   className={`px-6 py-2 text-white rounded-md transition-colors duration-200 ${
                     loading || isInsufficientPoints
                       ? 'bg-gray-400 cursor-not-allowed opacity-50' 
-                      : 'bg-blue-600 hover:bg-blue-700'
+                      : 'bg-blue-400 hover:bg-blue-500'
                   }`}
                 >
                   {loading ? '作成中...' : isInsufficientPoints ? 'ポイント不足' : 'アンケートを作成'}
@@ -636,7 +649,7 @@ export default function CreateSurveyPage() {
                 <button
                   onClick={handleConfirmCreate}
                   disabled={loading}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                  className="flex-1 px-4 py-2 bg-blue-400 text-white rounded-lg hover:bg-blue-500 disabled:opacity-50 transition-colors"
                 >
                   {loading ? '作成中...' : 'アンケートを作成'}
                 </button>

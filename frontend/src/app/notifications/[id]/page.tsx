@@ -265,9 +265,9 @@ export default function NotificationDetailPage() {
             <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-green-50 to-blue-50">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">🎁 特典ポイント</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">プレゼント</h3>
                   <p className="text-gray-700 mb-2">
-                    このお知らせをご覧いただいた方に <span className="font-bold text-green-600">{notification.reward_points}ポイント</span> をプレゼント！
+                    <span className="font-bold text-green-600">{notification.reward_points}ポイント</span> が届きました。
                   </p>
                   
                   {notification.max_claims && (
@@ -309,7 +309,7 @@ export default function NotificationDetailPage() {
                     <button
                       onClick={claimPoints}
                       disabled={claimLoading}
-                      className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white px-6 py-3 rounded-lg font-medium flex items-center transition-colors"
+                      className="bg-green-400 hover:bg-green-500 disabled:opacity-50 text-white px-6 py-3 rounded-lg font-medium flex items-center transition-colors"
                     >
                       {claimLoading ? (
                         <>
@@ -321,9 +321,6 @@ export default function NotificationDetailPage() {
                         </>
                       ) : (
                         <>
-                          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                          </svg>
                           {notification.reward_points}pt 受け取る
                         </>
                       )}

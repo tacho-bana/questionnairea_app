@@ -200,17 +200,7 @@ export default function SurveyPreview({ title, description, questions, rewardPoi
           </p>
         )}
 
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-start">
-            <div className="text-blue-400 text-xl mr-3">ℹ️</div>
-            <div>
-              <h4 className="text-blue-900 font-medium mb-1">回答について</h4>
-              <p className="text-blue-800 text-sm">
-                すべての質問に回答してください。回答後、{rewardPoints}ポイントが獲得できます。
-              </p>
-            </div>
-          </div>
-        </div>
+        
       </div>
 
       {/* Questions */}

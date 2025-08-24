@@ -121,7 +121,7 @@ function QuestionCard({
           type="text"
           value={question.question_text}
           onChange={(e) => onUpdate('question_text', e.target.value)}
-          className="w-full text-lg border-none border-b-2 border-gray-200 focus:border-blue-500 focus:outline-none pb-2 bg-transparent"
+          className="w-full text-lg border-none border-b-2 border-gray-200 focus:border-blue-500 focus:outline-none"
           placeholder="質問を入力"
           required
         />

@@ -242,7 +242,7 @@ export default function DatasetDetailPage() {
       }) || []
 
       const previewNote = listing?.price_type === 'free' 
-        ? '※このデータセットは無料です。すべてのデータをプレビューで確認できます。'
+        ? '※このデータセットは無料です。'
         : '※これは最初の3件のプレビューです。購入後、すべての回答データをダウンロードできます。'
 
       const preview: PreviewData = {
@@ -609,9 +609,6 @@ export default function DatasetDetailPage() {
                 <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-700">
                   {listing.survey.current_responses}回答
                 </span>
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-700">
-                  {listing.total_sales}販売済
-                </span>
               </div>
               
               <h1 className="text-3xl font-bold text-gray-900 mb-4">
@@ -619,12 +616,6 @@ export default function DatasetDetailPage() {
               </h1>
               
               <div className="flex items-center text-gray-600 text-sm space-x-6">
-                <div className="flex items-center">
-                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                  {listing.survey.users?.username}
-                </div>
                 <div className="flex items-center">
                   <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -930,10 +921,6 @@ export default function DatasetDetailPage() {
                 <div className="flex justify-between">
                   <span className="text-gray-500">回答数:</span>
                   <span className="font-medium">{listing.survey.current_responses}件</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">販売実績:</span>
-                  <span className="font-medium">{listing.total_sales}件</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">カテゴリ:</span>
